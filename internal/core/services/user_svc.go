@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"app/internal/core/models"
-	"app/internal/core/repositories"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var (
@@ -19,12 +19,30 @@ var (
 	ErrInvalidUserStatus = errors.New("invalid user status")
 )
 
-type UserService struct {
-	userRepo *repositories.UserRepository
-	logSvc   *LogService
+type UserRepository interface {
+	FindByUsername(ctx context.Context, username string) (*models.User, error)
+	FindByEmail(ctx context.Context, email string) (*models.User, error)
+	FindByID(ctx context.Context, id uint) (*models.User, error)
+	ListWithRoles(ctx context.Context, pagination *models.Pagination) ([]models.User, error)
+	Create(ctx context.Context, user *models.User) error
+	Update(ctx context.Context, user *models.User) error
+	Delete(ctx context.Context, id uint) error
+	GetDB() *gorm.DB
 }
 
-func NewUserService(userRepo *repositories.UserRepository, logSvc *LogService) *UserService {
+type LogServiceInterface interface {
+	RecordOperationLog(ctx context.Context, log *models.OperationLog) error
+	RecordLoginLog(ctx context.Context, userID uint, username, ip, userAgent string, status int, message string) error
+	GetUserLoginHistory(ctx context.Context, userID uint, limit int) ([]models.LoginLog, error)
+	GetUserOperationHistory(ctx context.Context, userID uint, limit int) ([]models.OperationLog, error)
+}
+
+type UserService struct {
+	userRepo UserRepository
+	logSvc   LogServiceInterface
+}
+
+func NewUserService(userRepo UserRepository, logSvc LogServiceInterface) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 		logSvc:   logSvc,

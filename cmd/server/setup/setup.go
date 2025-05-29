@@ -18,7 +18,7 @@ type App struct {
 
 func InitializeApp() (*App, error) {
 	// Load configuration
-	cfg, err := config.Load()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		return nil, err
 	}

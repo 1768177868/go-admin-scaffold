@@ -19,19 +19,10 @@ func NewKernel(scheduler *Scheduler) *Kernel {
 
 // Schedule defines scheduled tasks
 func (k *Kernel) Schedule() {
-	// Example: Run cleanup every day at midnight (unique)
-	k.scheduler.Command("cleanup").Daily().At("00:00").Unique().Register()
+	// Add your scheduled tasks here
+	// Example:
+	// k.scheduler.Command("cache:clear").EveryThirtyMinutes().Register()
 
-	// Example: Send daily report (unique)
-	k.scheduler.Command("report:daily").Daily().At("23:00").Unique().Register()
-
-	// Example: Database backup every 6 hours (unique)
-	k.scheduler.Command("db:backup").Cron("0 */6 * * *").Unique().Register()
-
-	// Example: Cache cleanup every 30 minutes (can run on multiple servers)
-	k.scheduler.Command("cache:clear").EveryThirtyMinutes().Register()
-
-	// Log scheduled tasks
 	log.Println("Scheduled tasks initialized")
 }
 

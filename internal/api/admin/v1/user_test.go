@@ -141,9 +141,9 @@ func TestExportUsers(t *testing.T) {
 
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/users/export", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	httpReq, _ := http.NewRequest("POST", "/users/export", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, httpReq)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -184,9 +184,9 @@ func TestCreateUser(t *testing.T) {
 
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	httpReq, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, httpReq)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -221,9 +221,9 @@ func TestUpdateUser(t *testing.T) {
 
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/users/1", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	httpReq, _ := http.NewRequest("PUT", "/users/1", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, httpReq)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 

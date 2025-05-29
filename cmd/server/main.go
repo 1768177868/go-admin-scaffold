@@ -20,7 +20,7 @@ import (
 
 func main() {
 	// Load configuration
-	cfg, err := config.Load()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +53,10 @@ func main() {
 
 	// Register commands that can be scheduled
 	manager.Register(commands.NewHelloWorldCommand())
-	// Register other commands that need to be scheduled...
+	manager.Register(commands.NewMigrateCommand())
+	manager.Register(commands.NewSeedCommand())
+	manager.Register(commands.NewSendEmailsCommand())
+	manager.Register(commands.NewMakeCommand())
 
 	// Create and start scheduler with Redis locker
 	scheduler := schedule.NewScheduler(manager, redisLocker)

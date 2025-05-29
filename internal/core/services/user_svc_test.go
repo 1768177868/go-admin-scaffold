@@ -16,7 +16,7 @@ import (
 // MockUserRepository is a mock implementation of UserRepository
 type MockUserRepository struct {
 	mock.Mock
-	*repositories.BaseRepository
+	*repositories.UserRepository
 }
 
 func (m *MockUserRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
@@ -74,6 +74,7 @@ func (m *MockUserRepository) GetDB() *gorm.DB {
 // MockLogService is a mock implementation of LogService
 type MockLogService struct {
 	mock.Mock
+	*LogService
 }
 
 func (m *MockLogService) RecordOperationLog(ctx context.Context, log *models.OperationLog) error {
@@ -86,9 +87,17 @@ func (m *MockLogService) RecordLoginLog(ctx context.Context, userID uint, userna
 	return args.Error(0)
 }
 
+func NewMockUserRepository() *MockUserRepository {
+	return &MockUserRepository{}
+}
+
+func NewMockLogService() *MockLogService {
+	return &MockLogService{}
+}
+
 func TestUserService_Create(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockLogSvc := new(MockLogService)
+	mockRepo := NewMockUserRepository()
+	mockLogSvc := NewMockLogService()
 	userSvc := NewUserService(mockRepo, mockLogSvc)
 
 	ctx := context.Background()
