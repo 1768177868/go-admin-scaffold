@@ -45,7 +45,8 @@ dist/
 
 # Config files
 /configs/config.yaml
-!/configs/config.example.yaml
+/configs/*.yaml
+!configs/config.example.yaml
 
 # Temporary files
 tmp/

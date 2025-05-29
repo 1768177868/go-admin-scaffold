@@ -94,99 +94,13 @@ GOOS=darwin GOARCH=amd64 go build -o build/go-admin-darwin-amd64 cmd/server/main
 # Create directory structure
 ssh user@your-server "mkdir -p /opt/go-admin/{bin,configs,logs}"
 
-# Copy binary and configuration
+# Copy binary
 scp build/go-admin-linux-amd64 user@your-server:/opt/go-admin/bin/go-admin
-scp configs/config.prod.yaml user@your-server:/opt/go-admin/configs/config.yaml
+
+# Copy example config and customize it
+scp configs/config.example.yaml user@your-server:/opt/go-admin/configs/config.yaml
+ssh user@your-server "vim /opt/go-admin/configs/config.yaml"  # Edit according to your environment
 ```
 
 3. Set up systemd service (Linux):
-```bash
-# Create systemd service file
-sudo cat > /etc/systemd/system/go-admin.service << EOF
-[Unit]
-Description=Go Admin Backend Service
-After=network.target mysql.service redis.service
-
-[Service]
-Type=simple
-User=go-admin
-WorkingDirectory=/opt/go-admin
-ExecStart=/opt/go-admin/bin/go-admin
-Restart=always
-RestartSec=3
-Environment=GIN_MODE=release
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Reload systemd and start service
-sudo systemctl daemon-reload
-sudo systemctl enable go-admin
-sudo systemctl start go-admin
 ```
-
-4. Monitor the service:
-```bash
-# Check service status
-sudo systemctl status go-admin
-
-# View logs
-sudo journalctl -u go-admin -f
-```
-
-For detailed deployment instructions and best practices, please refer to our [Deployment Guide](docs/deployment.md).
-
-## Project Structure
-
-```
-.
-├── cmd/                  # Application entry points
-│   └── server/          # Main server application
-├── configs/             # Configuration files
-│   ├── config.yaml      # Main configuration file
-│   └── config.example.yaml  # Example configuration
-├── docs/               # Documentation files
-│   ├── api/           # API documentation
-│   ├── features/      # Feature documentation
-│   └── getting-started/ # Getting started guides
-├── internal/            # Private application code
-│   ├── api/            # API handlers
-│   ├── config/         # Configuration structures
-│   ├── core/           # Core business logic
-│   ├── middleware/     # HTTP middleware
-│   ├── models/         # Database models
-│   └── routes/         # Route definitions
-├── pkg/                # Public libraries
-│   ├── database/       # Database utilities
-│   ├── logger/         # Logging utilities
-│   ├── queue/          # Queue implementation
-│   ├── auth/           # Authentication utilities
-│   └── response/       # API response helpers
-├── scripts/            # Build and deployment scripts
-├── static/             # Static assets
-├── locales/            # I18n translation files
-└── deploy/             # Deployment configurations
-```
-
-## Development
-
-### Testing
-
-For running tests and test coverage, please refer to our [Testing Guide](docs/testing.md).
-
-### API Documentation
-
-The API documentation is available at `/swagger/index.html` when running in development mode. For detailed API documentation, check [API Reference](docs/api/README.md).
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
