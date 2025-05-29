@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Register("20240310_create_users_table", &MigrationDefinition{
+	Register("20240301_create_users_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type User struct {
 				ID        uint   `gorm:"primarykey"`

@@ -1,6 +1,10 @@
 package migrations
 
-import "gorm.io/gorm"
+import (
+	"sort"
+
+	"gorm.io/gorm"
+)
 
 var migrations = make(map[string]*MigrationDefinition)
 
@@ -14,11 +18,21 @@ func GetMigrations() map[string]*MigrationDefinition {
 	return migrations
 }
 
-// InitMigrations initializes all migrations
+// InitMigrations initializes all migrations in correct order
 func InitMigrations(db *gorm.DB) *Migrator {
 	migrator := NewMigrator(db)
-	for name, migration := range migrations {
-		migrator.Register(name, migration)
+
+	// Get sorted migration names
+	var names []string
+	for name := range migrations {
+		names = append(names, name)
 	}
+	sort.Strings(names) // This ensures chronological order due to timestamp prefix
+
+	// Register migrations in sorted order
+	for _, name := range names {
+		migrator.Register(name, migrations[name])
+	}
+
 	return migrator
 }

@@ -54,6 +54,9 @@ vim configs/config.yaml
 
 4. Set up the database:
 ```bash
+# Create database (if not exists)
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS go_admin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
 # Run all pending migrations
 go run cmd/tools/main.go migrate run
 
@@ -65,8 +68,21 @@ go run cmd/tools/main.go migrate status    # Check migration status
 go run cmd/tools/main.go migrate rollback  # Rollback last batch of migrations
 go run cmd/tools/main.go migrate reset     # Reset all migrations
 go run cmd/tools/main.go migrate refresh   # Reset and re-run all migrations
-go run cmd/tools/main.go seed status      # Check seeding status
+go run cmd/tools/main.go seed status       # Check seeding status
+go run cmd/tools/main.go seed reset        # Reset seeding data
 ```
+
+After successful setup, the following default accounts are created:
+
+**Admin Account:**
+- Username: `admin`
+- Password: `admin123`
+- Role: Administrator (all permissions)
+
+**Test Accounts:**
+- Username: `manager` / `user`
+- Password: `admin123`
+- Roles: Manager / Regular User (limited permissions)
 
 5. Run the application:
 ```bash

@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Register("20240310_create_roles_table", &MigrationDefinition{
+	Register("20240302_create_roles_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type Role struct {
 				ID          uint     `gorm:"primarykey"`
