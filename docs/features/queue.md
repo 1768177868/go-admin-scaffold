@@ -49,7 +49,7 @@ QUEUE_TIMEOUT=60          # 任务超时时间
 ### 1. 创建任务
 
 ```go
-import "github.com/yourusername/go-admin-scaffold/pkg/queue"
+import "github.com/1768177868/go-admin-scaffold/pkg/queue"
 
 // 创建任务
 job := queue.NewJob("send_email", map[string]interface{}{
@@ -304,5 +304,5 @@ nssm start GoAdminQueue
 
 - [配置说明](../getting-started/configuration.md)
 - [开发环境配置](../advanced/development.md)
-- [部署指南](../deployment/production.md)
-- [API 文档](../api/queue.md) 
+- [部署指南](../deployment/README.md)
+- [API 文档](../api/README.md) 

@@ -85,7 +85,7 @@ Go Admin Scaffold 是一个基于 Go 语言开发的现代化后台管理系统�
 ## 技术栈
 
 ### 后端技术
-- **核心框架**: Go 1.21+
+- **核心框架**: Go 1.18+
 - **Web 框架**: Gin
 - **ORM**: GORM
 - **数据库**: MySQL 5.7+
@@ -199,7 +199,7 @@ Go Admin Scaffold 是一个基于 Go 语言开发的现代化后台管理系统�
 
 ## 联系方式
 
-- 项目主页：[GitHub](https://github.com/yourusername/go-admin-scaffold)
-- 问题反馈：[Issues](https://github.com/yourusername/go-admin-scaffold/issues)
+- 项目主页：[GitHub](https://github.com/1768177868/go-admin-scaffold)
+- 问题反馈：[Issues](https://github.com/1768177868/go-admin-scaffold/issues)
 - 邮件联系：your-email@example.com
 - 技术交流群：xxx 

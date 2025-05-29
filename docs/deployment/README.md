@@ -12,8 +12,8 @@
 
 1. 下载二进制文件
 ```bash
-# 下载最新版本
-wget https://github.com/yourusername/go-admin-scaffold/releases/latest/download/go-admin-scaffold.zip
+# 下载最新发布版本
+wget https://github.com/1768177868/go-admin-scaffold/releases/latest/download/go-admin-scaffold.zip
 
 # 解压文件
 unzip go-admin-scaffold.zip

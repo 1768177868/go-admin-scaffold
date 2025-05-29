@@ -159,7 +159,7 @@ CACHE_DRIVER=redis
 ### 1. 获取配置
 
 ```go
-import "github.com/yourusername/go-admin-scaffold/pkg/config"
+import "github.com/1768177868/go-admin-scaffold/pkg/config"
 
 // 获取配置
 port := config.Get("app.port")

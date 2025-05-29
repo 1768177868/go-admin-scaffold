@@ -4,7 +4,7 @@
 
 ## 环境要求
 
-- Go 1.21 或更高版本
+- Go 1.18 或更高版本
 - MySQL 5.7 或更高版本
 - Redis 6.0 或更高版本
 - Git
@@ -15,7 +15,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/yourusername/go-admin-scaffold.git
+git clone https://github.com/1768177868/go-admin-scaffold.git
 cd go-admin-scaffold
 
 # 安装依赖
@@ -245,6 +245,6 @@ go run cmd/tools/main.go make seeder user
 ## 获取帮助
 
 - 查看 [常见问题](../faq/README.md)
-- 提交 [Issue](https://github.com/yourusername/go-admin-scaffold/issues)
+- 提交 [Issue](https://github.com/1768177868/go-admin-scaffold/issues)
 - 加入技术交流群
 - 发送邮件至：your-email@example.com 

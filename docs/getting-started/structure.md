@@ -328,8 +328,8 @@
 
 ## 相关文档
 
-- [快速开始指南](quick-start.md)
-- [配置指南](configuration.md)
-- [开发指南](../advanced/development-guide.md)
-- [API 文档](../api/README.md)
-- [测试指南](../testing.md) 
+- [快速开始](quick-start.md)
+- [配置说明](configuration.md)
+- [开发环境配置](../advanced/development.md)
+- [测试指南](../advanced/testing.md)
+- [部署指南](../deployment/README.md) 

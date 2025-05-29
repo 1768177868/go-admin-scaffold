@@ -66,8 +66,8 @@ package services
 
 import (
     "testing"
-    "github.com/yourusername/go-admin-scaffold/internal/models"
-    "github.com/yourusername/go-admin-scaffold/pkg/database"
+    "github.com/1768177868/go-admin-scaffold/internal/models"
+    "github.com/1768177868/go-admin-scaffold/pkg/database"
 )
 
 func TestAuthService_Login(t *testing.T) {
@@ -197,7 +197,7 @@ go tool cover -func=coverage.out | grep total | awk '{print $3}' | cut -d. -f1
 // internal/database/fixtures/users.go
 package fixtures
 
-import "github.com/yourusername/go-admin-scaffold/internal/models"
+import "github.com/1768177868/go-admin-scaffold/internal/models"
 
 var Users = []models.User{
     {

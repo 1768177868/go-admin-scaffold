@@ -6,7 +6,7 @@
 
 ### 1. 基础环境
 
-- Go 1.21 或更高版本
+- Go 1.18 或更高版本
 - MySQL 5.7 或更高版本
 - Redis 6.0 或更高版本
 - Git
@@ -125,7 +125,7 @@ sudo systemctl start redis
 
 ```bash
 # 克隆项目
-git clone https://github.com/yourusername/go-admin-scaffold.git
+git clone https://github.com/1768177868/go-admin-scaffold.git
 cd go-admin-scaffold
 
 # 安装依赖
@@ -288,7 +288,7 @@ go tool cover -html=coverage.out
 
 3. 使用日志调试：
 ```go
-import "github.com/yourusername/go-admin-scaffold/pkg/logger"
+import "github.com/1768177868/go-admin-scaffold/pkg/logger"
 
 logger.Debug("debug message")
 logger.Info("info message")

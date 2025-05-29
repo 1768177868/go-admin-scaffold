@@ -109,6 +109,8 @@ router.POST("/articles",
 
 ## 相关文档
 
-- [用户认证](authentication.md)
-- [错误处理](../advanced/error-handling.md)
-- [API 文档](../api/README.md) 
+- [认证系统](authentication.md)
+- [配置说明](../getting-started/configuration.md)
+- [开发环境配置](../advanced/development.md)
+- [API 文档](../api/README.md)
+- [部署指南](../deployment/README.md) 
