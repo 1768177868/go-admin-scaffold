@@ -20,13 +20,14 @@ var (
 type I18n struct {
 	sync.RWMutex
 	defaultLocale string
-	translations  map[string]map[string]string
+	translations  map[string]map[string]interface{}
 }
 
 // Config represents i18n configuration
 type Config struct {
-	DefaultLocale string `mapstructure:"default_locale"`
-	LoadPath      string `mapstructure:"load_path"`
+	DefaultLocale    string   `mapstructure:"default_locale"`
+	LoadPath         string   `mapstructure:"load_path"`
+	AvailableLocales []string `mapstructure:"available_locales"`
 }
 
 // New creates a new I18n instance
@@ -34,7 +35,7 @@ func New(config *Config) *I18n {
 	once.Do(func() {
 		instance = &I18n{
 			defaultLocale: config.DefaultLocale,
-			translations:  make(map[string]map[string]string),
+			translations:  make(map[string]map[string]interface{}),
 		}
 		if err := instance.loadTranslations(config.LoadPath); err != nil {
 			panic(fmt.Sprintf("Failed to load translations: %v", err))
@@ -61,31 +62,57 @@ func (i *I18n) T(locale, key string, args ...interface{}) string {
 		locale = i.defaultLocale
 	}
 
-	// Get translation
-	translation, ok := i.translations[locale][key]
-	if !ok {
-		// If translation not found in specified locale, try default locale
-		if locale != i.defaultLocale {
-			if t, ok := i.translations[i.defaultLocale][key]; ok {
-				translation = t
-			} else {
-				return key
-			}
-		} else {
-			return key
-		}
+	// Split the key by dots to traverse nested translations
+	parts := strings.Split(key, ".")
+	value := i.getNestedValue(i.translations[locale], parts)
+
+	// If value not found in specified locale, try default locale
+	if value == "" && locale != i.defaultLocale {
+		value = i.getNestedValue(i.translations[i.defaultLocale], parts)
+	}
+
+	// If still not found, return the key
+	if value == "" {
+		return key
 	}
 
 	// If there are arguments, format the translation
 	if len(args) > 0 {
-		return fmt.Sprintf(translation, args...)
+		return fmt.Sprintf(value, args...)
 	}
 
-	return translation
+	return value
+}
+
+// getNestedValue retrieves a nested value from a map using dot notation
+func (i *I18n) getNestedValue(data map[string]interface{}, keys []string) string {
+	if len(keys) == 0 {
+		return ""
+	}
+
+	current := data
+	for i, key := range keys {
+		if i == len(keys)-1 {
+			// Last key should return a string value
+			if str, ok := current[key].(string); ok {
+				return str
+			}
+			return ""
+		}
+
+		// For intermediate keys, get the nested map
+		if next, ok := current[key].(map[string]interface{}); ok {
+			current = next
+		} else {
+			return ""
+		}
+	}
+
+	return ""
 }
 
 // GetTranslations returns all translations for a specific locale
-func (i *I18n) GetTranslations(locale string) map[string]string {
+func (i *I18n) GetTranslations(locale string) map[string]interface{} {
 	i.RLock()
 	defer i.RUnlock()
 
@@ -110,7 +137,7 @@ func (i *I18n) loadTranslations(path string) error {
 			return fmt.Errorf("failed to read translation file %s: %v", file, err)
 		}
 
-		var translations map[string]string
+		var translations map[string]interface{}
 		if err := yaml.Unmarshal(data, &translations); err != nil {
 			return fmt.Errorf("failed to parse translation file %s: %v", file, err)
 		}

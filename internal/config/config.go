@@ -12,16 +12,17 @@ import (
 )
 
 type Config struct {
-	App    AppConfig    `mapstructure:"app"`
-	JWT    JWTConfig    `mapstructure:"jwt"`
-	MySQL  MySQLConfig  `mapstructure:"mysql"`
-	Redis  RedisConfig  `mapstructure:"redis"`
-	Log    LogConfig    `mapstructure:"log"`
-	Cache  CacheConfig  `mapstructure:"cache"`
-	Queue  QueueConfig  `mapstructure:"queue"`
-	I18n   i18n.Config  `mapstructure:"i18n"`
-	CORS   CORSConfig   `mapstructure:"cors"`
-	Server ServerConfig `mapstructure:"server"`
+	App     AppConfig     `mapstructure:"app"`
+	JWT     JWTConfig     `mapstructure:"jwt"`
+	MySQL   MySQLConfig   `mapstructure:"mysql"`
+	Redis   RedisConfig   `mapstructure:"redis"`
+	Log     LogConfig     `mapstructure:"log"`
+	Cache   CacheConfig   `mapstructure:"cache"`
+	Queue   QueueConfig   `mapstructure:"queue"`
+	I18n    i18n.Config   `mapstructure:"i18n"`
+	CORS    CORSConfig    `mapstructure:"cors"`
+	Server  ServerConfig  `mapstructure:"server"`
+	Storage StorageConfig `mapstructure:"storage"`
 }
 
 type ServerConfig struct {
@@ -90,6 +91,11 @@ type CORSConfig struct {
 	MaxAge           time.Duration `mapstructure:"max_age"`
 }
 
+type StorageConfig struct {
+	Driver  string                 `mapstructure:"driver"`
+	Options map[string]interface{} `mapstructure:"options"`
+}
+
 // Load loads configuration from environment variables and config files
 func LoadConfig() (*Config, error) {
 	config := &Config{}
@@ -117,6 +123,12 @@ func LoadConfig() (*Config, error) {
 	config.App.Env = getEnvOrDefault("APP_ENV", viper.GetString("app.env"))
 	config.App.Debug = getEnvBoolOrDefault("APP_DEBUG", viper.GetBool("app.debug"))
 	config.App.BaseURL = getEnvOrDefault("APP_URL", viper.GetString("app.baseUrl"))
+	config.App.Port = getEnvIntOrDefault("APP_PORT", viper.GetInt("app.port"))
+	config.App.APIPrefix = getEnvOrDefault("APP_API_PREFIX", viper.GetString("app.api_prefix"))
+
+	// JWT
+	config.JWT.Secret = getEnvOrDefault("JWT_SECRET", viper.GetString("jwt.secret"))
+	config.JWT.ExpireTime = getEnvIntOrDefault("JWT_EXPIRE", viper.GetInt("jwt.expire"))
 
 	// MySQL
 	config.MySQL.Host = getEnvOrDefault("DB_HOST", viper.GetString("mysql.host"))
@@ -124,12 +136,24 @@ func LoadConfig() (*Config, error) {
 	config.MySQL.Username = getEnvOrDefault("DB_USERNAME", viper.GetString("mysql.username"))
 	config.MySQL.Password = getEnvOrDefault("DB_PASSWORD", viper.GetString("mysql.password"))
 	config.MySQL.Database = getEnvOrDefault("DB_DATABASE", viper.GetString("mysql.database"))
+	config.MySQL.MaxIdleConns = getEnvIntOrDefault("DB_MAX_IDLE_CONNS", viper.GetInt("mysql.max_idle_conns"))
+	config.MySQL.MaxOpenConns = getEnvIntOrDefault("DB_MAX_OPEN_CONNS", viper.GetInt("mysql.max_open_conns"))
+	config.MySQL.ConnMaxLifetime = getEnvIntOrDefault("DB_CONN_MAX_LIFETIME", viper.GetInt("mysql.conn_max_lifetime"))
 
 	// Redis
 	config.Redis.Host = getEnvOrDefault("REDIS_HOST", viper.GetString("redis.host"))
 	config.Redis.Port = getEnvIntOrDefault("REDIS_PORT", viper.GetInt("redis.port"))
 	config.Redis.Password = getEnvOrDefault("REDIS_PASSWORD", viper.GetString("redis.password"))
 	config.Redis.DB = getEnvIntOrDefault("REDIS_DB", viper.GetInt("redis.db"))
+
+	// Cache
+	config.Cache.Driver = getEnvOrDefault("CACHE_DRIVER", viper.GetString("cache.driver"))
+	config.Cache.Prefix = getEnvOrDefault("CACHE_PREFIX", viper.GetString("cache.prefix"))
+	config.Cache.Options = viper.GetStringMap("cache.options")
+
+	// Queue
+	config.Queue.Driver = getEnvOrDefault("QUEUE_DRIVER", viper.GetString("queue.driver"))
+	config.Queue.Options = viper.GetStringMap("queue.options")
 
 	// Server
 	config.Server.Address = getEnvOrDefault("SERVER_ADDRESS", viper.GetString("server.address"))
@@ -149,6 +173,15 @@ func LoadConfig() (*Config, error) {
 	config.CORS.ExposeHeaders = viper.GetStringSlice("cors.expose_headers")
 	config.CORS.AllowCredentials = viper.GetBool("cors.allow_credentials")
 	config.CORS.MaxAge = viper.GetDuration("cors.max_age")
+
+	// I18n
+	config.I18n.DefaultLocale = getEnvOrDefault("I18N_DEFAULT_LOCALE", viper.GetString("i18n.default_locale"))
+	config.I18n.LoadPath = getEnvOrDefault("I18N_LOAD_PATH", viper.GetString("i18n.load_path"))
+	config.I18n.AvailableLocales = viper.GetStringSlice("i18n.available_locales")
+
+	// Storage
+	config.Storage.Driver = getEnvOrDefault("STORAGE_DRIVER", viper.GetString("storage.driver"))
+	config.Storage.Options = viper.GetStringMap("storage.options")
 
 	return config, nil
 }
