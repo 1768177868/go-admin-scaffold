@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -48,27 +49,43 @@ func init() {
 				return err
 			}
 
-			// Add indexes
-			return tx.Exec(`
-				CREATE INDEX idx_login_logs_login_time ON login_logs(login_time);
-				CREATE INDEX idx_login_logs_status ON login_logs(status);
-				CREATE INDEX idx_operation_logs_operation_time ON operation_logs(operation_time);
-				CREATE INDEX idx_operation_logs_module ON operation_logs(module);
-				CREATE INDEX idx_operation_logs_action ON operation_logs(action);
-				CREATE INDEX idx_operation_logs_status ON operation_logs(status);
-			`).Error
+			// Add indexes for login_logs
+			if err := tx.Exec("CREATE INDEX idx_login_logs_login_time ON login_logs(login_time)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_login_logs_status ON login_logs(status)").Error; err != nil {
+				return err
+			}
+
+			// Add indexes for operation_logs
+			if err := tx.Exec("CREATE INDEX idx_operation_logs_operation_time ON operation_logs(operation_time)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_operation_logs_module ON operation_logs(module)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_operation_logs_action ON operation_logs(action)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_operation_logs_status ON operation_logs(status)").Error; err != nil {
+				return err
+			}
+
+			return nil
 		},
 		Down: func(tx *gorm.DB) error {
 			// Drop indexes first
-			if err := tx.Exec(`
-				DROP INDEX IF EXISTS idx_login_logs_login_time ON login_logs;
-				DROP INDEX IF EXISTS idx_login_logs_status ON login_logs;
-				DROP INDEX IF EXISTS idx_operation_logs_operation_time ON operation_logs;
-				DROP INDEX IF EXISTS idx_operation_logs_module ON operation_logs;
-				DROP INDEX IF EXISTS idx_operation_logs_action ON operation_logs;
-				DROP INDEX IF EXISTS idx_operation_logs_status ON operation_logs;
-			`).Error; err != nil {
-				return err
+			for _, idx := range []string{
+				"idx_login_logs_login_time",
+				"idx_login_logs_status",
+				"idx_operation_logs_operation_time",
+				"idx_operation_logs_module",
+				"idx_operation_logs_action",
+				"idx_operation_logs_status",
+			} {
+				if err := tx.Exec("DROP INDEX IF EXISTS " + idx + " ON " + tableNameFromIndex(idx)).Error; err != nil {
+					return err
+				}
 			}
 
 			// Drop tables
@@ -78,4 +95,15 @@ func init() {
 			return tx.Migrator().DropTable("operation_logs")
 		},
 	})
+}
+
+// tableNameFromIndex returns the table name from an index name
+func tableNameFromIndex(indexName string) string {
+	if len(indexName) > 4 && indexName[:4] == "idx_" {
+		parts := strings.Split(indexName[4:], "_")
+		if len(parts) >= 2 {
+			return parts[0] + "_" + parts[1]
+		}
+	}
+	return ""
 }
