@@ -74,17 +74,22 @@ func init() {
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
-			// Drop indexes first
-			for _, idx := range []string{
+			// Drop indexes first (MySQL compatible syntax)
+			indexes := []string{
 				"idx_login_logs_login_time",
 				"idx_login_logs_status",
 				"idx_operation_logs_operation_time",
 				"idx_operation_logs_module",
 				"idx_operation_logs_action",
 				"idx_operation_logs_status",
-			} {
-				if err := tx.Exec("DROP INDEX IF EXISTS " + idx + " ON " + tableNameFromIndex(idx)).Error; err != nil {
-					return err
+			}
+
+			for _, idx := range indexes {
+				tableName := tableNameFromIndex(idx)
+				if tableName != "" {
+					if err := tx.Exec("ALTER TABLE " + tableName + " DROP INDEX " + idx).Error; err != nil {
+						// Ignore error if index doesn't exist
+					}
 				}
 			}
 

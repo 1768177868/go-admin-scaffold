@@ -28,9 +28,9 @@ func init() {
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
-			// Drop index first
-			if err := tx.Exec("DROP INDEX IF EXISTS idx_seeder_histories_executed_at ON seeder_histories").Error; err != nil {
-				return err
+			// Drop index first (MySQL compatible syntax)
+			if err := tx.Exec("ALTER TABLE seeder_histories DROP INDEX idx_seeder_histories_executed_at").Error; err != nil {
+				// Ignore error if index doesn't exist
 			}
 
 			// Drop table

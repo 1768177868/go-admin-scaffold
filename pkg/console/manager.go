@@ -3,7 +3,6 @@ package console
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -23,14 +22,11 @@ func NewManager() *Manager {
 func (m *Manager) Register(cmd Command) {
 	config := &CommandConfig{}
 	cmd.Configure(config)
-	log.Printf("Registering command: %s", config.Name)
 	m.commands[config.Name] = cmd
 }
 
 // FindCommand finds a command by name
 func (m *Manager) FindCommand(name string) Command {
-	log.Printf("Looking for command: %s", name)
-	log.Printf("Available commands: %v", m.commands)
 	return m.commands[name]
 }
 

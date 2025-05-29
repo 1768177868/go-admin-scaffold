@@ -37,20 +37,20 @@ func init() {
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
-			// Drop foreign keys first
-			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_user_id").Error; err != nil {
-				return err
+			// Drop foreign keys first (MySQL compatible syntax)
+			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY fk_user_roles_user_id").Error; err != nil {
+				// Ignore error if foreign key doesn't exist
 			}
-			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_role_id").Error; err != nil {
-				return err
+			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY fk_user_roles_role_id").Error; err != nil {
+				// Ignore error if foreign key doesn't exist
 			}
 
-			// Drop indexes
-			if err := tx.Exec("DROP INDEX IF EXISTS idx_user_roles_user_id ON user_roles").Error; err != nil {
-				return err
+			// Drop indexes (MySQL compatible syntax)
+			if err := tx.Exec("ALTER TABLE user_roles DROP INDEX idx_user_roles_user_id").Error; err != nil {
+				// Ignore error if index doesn't exist
 			}
-			if err := tx.Exec("DROP INDEX IF EXISTS idx_user_roles_role_id ON user_roles").Error; err != nil {
-				return err
+			if err := tx.Exec("ALTER TABLE user_roles DROP INDEX idx_user_roles_role_id").Error; err != nil {
+				// Ignore error if index doesn't exist
 			}
 
 			// Drop table

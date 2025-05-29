@@ -57,22 +57,37 @@ func (m *SeederManager) Run(names ...string) error {
 		}
 	}
 
-	// Build dependency graph
+	// Check which seeders have already been executed
+	var executed []struct {
+		Name string
+	}
+	if err := m.db.Table("seeder_histories").Select("name").Find(&executed).Error; err != nil {
+		return err
+	}
+
+	executedMap := make(map[string]bool)
+	for _, e := range executed {
+		executedMap[e.Name] = true
+	}
+
+	// Build dependency graph for only non-executed seeders
 	graph := make(map[string][]string)
 	for _, name := range names {
 		if seeder, ok := m.seeders[name]; ok {
-			graph[name] = seeder.Dependencies
+			if !executedMap[name] {
+				graph[name] = seeder.Dependencies
+			}
 		} else {
 			return fmt.Errorf("seeder not found: %s", name)
 		}
 	}
 
 	// Resolve dependencies
-	executed := make(map[string]bool)
+	executedInThisRun := make(map[string]bool)
 	var execute func(name string) error
 
 	execute = func(name string) error {
-		if executed[name] {
+		if executedInThisRun[name] || executedMap[name] {
 			return nil
 		}
 
@@ -101,15 +116,19 @@ func (m *SeederManager) Run(names ...string) error {
 			return fmt.Errorf("failed to run seeder %s: %w", name, err)
 		}
 
-		executed[name] = true
+		executedInThisRun[name] = true
 		fmt.Printf("Seeded: %s\n", name)
 		return nil
 	}
 
 	// Execute seeders
 	for _, name := range names {
-		if err := execute(name); err != nil {
-			return err
+		if !executedMap[name] {
+			if err := execute(name); err != nil {
+				return err
+			}
+		} else {
+			fmt.Printf("Skipped: %s (already executed)\n", name)
 		}
 	}
 
@@ -119,18 +138,45 @@ func (m *SeederManager) Run(names ...string) error {
 // Reset removes all seeded data
 func (m *SeederManager) Reset() error {
 	return m.db.Transaction(func(tx *gorm.DB) error {
-		// Clear seeder history
-		if err := tx.Exec("DELETE FROM seeder_histories").Error; err != nil {
+		// Get all executed seeders in reverse dependency order
+		var executed []struct {
+			Name string
+		}
+		if err := tx.Table("seeder_histories").Select("name").Find(&executed).Error; err != nil {
 			return err
 		}
 
-		// Execute down logic for each seeder if provided
-		for name, seeder := range m.seeders {
-			if seeder.Run != nil {
-				if err := seeder.Run(tx); err != nil {
-					return fmt.Errorf("failed to reset seeder %s: %w", name, err)
+		// Clear data for each executed seeder in reverse order
+		executedMap := make(map[string]bool)
+		for _, e := range executed {
+			executedMap[e.Name] = true
+		}
+
+		// Define table clearing order (reverse of dependency order)
+		clearOrder := []string{"user_roles", "users", "roles"}
+
+		for _, seederName := range clearOrder {
+			if executedMap[seederName] {
+				switch seederName {
+				case "user_roles":
+					if err := tx.Exec("DELETE FROM user_roles").Error; err != nil {
+						return err
+					}
+				case "users":
+					if err := tx.Exec("DELETE FROM users").Error; err != nil {
+						return err
+					}
+				case "roles":
+					if err := tx.Exec("DELETE FROM roles").Error; err != nil {
+						return err
+					}
 				}
 			}
+		}
+
+		// Clear seeder history
+		if err := tx.Exec("DELETE FROM seeder_histories").Error; err != nil {
+			return err
 		}
 
 		return nil

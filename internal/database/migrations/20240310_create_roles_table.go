@@ -37,12 +37,12 @@ func init() {
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
-			// Drop indexes first
-			if err := tx.Exec("DROP INDEX IF EXISTS idx_roles_code ON roles").Error; err != nil {
-				return err
+			// Drop indexes first (MySQL compatible syntax)
+			if err := tx.Exec("ALTER TABLE roles DROP INDEX idx_roles_code").Error; err != nil {
+				// Ignore error if index doesn't exist
 			}
-			if err := tx.Exec("DROP INDEX IF EXISTS idx_roles_status ON roles").Error; err != nil {
-				return err
+			if err := tx.Exec("ALTER TABLE roles DROP INDEX idx_roles_status").Error; err != nil {
+				// Ignore error if index doesn't exist
 			}
 
 			// Drop table
