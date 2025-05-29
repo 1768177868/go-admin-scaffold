@@ -73,6 +73,70 @@ docker run -d \
   go-admin
 ```
 
+### Binary Deployment
+
+For production environments, you can deploy the application as a binary:
+
+1. Build the binary for your target platform:
+```bash
+# Build for Linux (amd64)
+GOOS=linux GOARCH=amd64 go build -o build/go-admin-linux-amd64 cmd/server/main.go
+
+# Build for Windows
+GOOS=windows GOARCH=amd64 go build -o build/go-admin-windows-amd64.exe cmd/server/main.go
+
+# Build for macOS
+GOOS=darwin GOARCH=amd64 go build -o build/go-admin-darwin-amd64 cmd/server/main.go
+```
+
+2. Transfer the binary and configuration to your server:
+```bash
+# Create directory structure
+ssh user@your-server "mkdir -p /opt/go-admin/{bin,configs,logs}"
+
+# Copy binary and configuration
+scp build/go-admin-linux-amd64 user@your-server:/opt/go-admin/bin/go-admin
+scp configs/config.prod.yaml user@your-server:/opt/go-admin/configs/config.yaml
+```
+
+3. Set up systemd service (Linux):
+```bash
+# Create systemd service file
+sudo cat > /etc/systemd/system/go-admin.service << EOF
+[Unit]
+Description=Go Admin Backend Service
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=go-admin
+WorkingDirectory=/opt/go-admin
+ExecStart=/opt/go-admin/bin/go-admin
+Restart=always
+RestartSec=3
+Environment=GIN_MODE=release
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and start service
+sudo systemctl daemon-reload
+sudo systemctl enable go-admin
+sudo systemctl start go-admin
+```
+
+4. Monitor the service:
+```bash
+# Check service status
+sudo systemctl status go-admin
+
+# View logs
+sudo journalctl -u go-admin -f
+```
+
+For detailed deployment instructions and best practices, please refer to our [Deployment Guide](docs/deployment.md).
+
 ## Project Structure
 
 ```

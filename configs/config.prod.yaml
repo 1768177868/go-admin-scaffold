@@ -1,0 +1,48 @@
+server:
+  address: ":8080"
+  mode: "release"  # gin mode: debug, release, test
+
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "your-password"
+  database: "go_admin"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your-jwt-secret-key"  # Change this in production!
+  expire_time: 24  # hours
+
+log:
+  level: "info"  # debug, info, warn, error
+  filename: "storage/logs/app.log"
+  max_size: 100    # megabytes
+  max_age: 30      # days
+  max_backups: 10
+  compress: true
+
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
+  allow_credentials: true
+  max_age: 12h
+
+storage:
+  driver: "local"  # local, s3, etc
+  options:
+    root_path: "storage/uploads"
+
+i18n:
+  default_language: "en"
+  languages: ["en", "zh-CN"] 
