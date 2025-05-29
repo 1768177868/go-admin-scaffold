@@ -24,7 +24,7 @@ type User struct {
 
 // TableName specifies the table name for User model
 func (User) TableName() string {
-	return "sys_users"
+	return "users"
 }
 
 // BeforeSave hook is called before saving the user

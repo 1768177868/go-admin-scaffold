@@ -81,3 +81,18 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, e
 func (r *UserRepository) GetDB() *gorm.DB {
 	return r.db
 }
+
+// Create creates a new user
+func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
+}
+
+// Update updates an existing user
+func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
+}
+
+// Delete deletes a user by ID
+func (r *UserRepository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+}

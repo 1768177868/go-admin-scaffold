@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"app/internal/core/services"
 	"app/internal/core/ws"
 	"app/pkg/response"
 	"net/http"
@@ -35,12 +36,36 @@ func NewWSHandler() *WSHandler {
 // @Accept  json
 // @Produce  json
 // @Param user_id query string true "User ID"
+// @Param token query string true "JWT Token"
 // @Success 101 {string} string "Switching Protocols to websocket"
 // @Router /ws [get]
 func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 	userID := c.Query("user_id")
+	token := c.Query("token")
+
 	if userID == "" {
 		response.ParamError(c, "user_id is required")
+		return
+	}
+
+	if token == "" {
+		response.ParamError(c, "token is required")
+		return
+	}
+
+	// Validate token (get auth service from context)
+	authSvc := c.MustGet("authService").(*services.AuthService)
+
+	claims, err := authSvc.ValidateToken(token)
+	if err != nil {
+		response.UnauthorizedError(c)
+		return
+	}
+
+	// Verify that the token's user_id matches the provided userID
+	tokenUserID, ok := claims["username"]
+	if !ok || tokenUserID != userID {
+		response.UnauthorizedError(c)
 		return
 	}
 

@@ -11,14 +11,21 @@
             margin: 0 auto;
             padding: 20px;
         }
+        .login-container {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
         .chat-container {
-            display: grid;
+            display: none; /* Initially hidden until logged in */
             grid-template-columns: 200px 1fr;
             gap: 20px;
             margin-top: 20px;
         }
         .sidebar {
             border-right: 1px solid #ccc;
+            padding: 10px;
         }
         .message-area {
             height: 400px;
@@ -40,19 +47,41 @@
             grid-template-columns: 1fr auto;
             gap: 10px;
         }
-        button { padding: 5px 10px; }
-        input, select { padding: 5px; }
+        button { 
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        input, select { 
+            padding: 5px;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+        }
+        .status {
+            color: green;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
     <h1>WebSocket Chat Demo</h1>
     
-    <div>
-        <input type="text" id="userId" placeholder="Enter your user ID">
-        <button onclick="connect()">Connect</button>
+    <!-- Login Form -->
+    <div class="login-container" id="loginForm">
+        <h2>Login</h2>
+        <div>
+            <input type="text" id="username" placeholder="Username" value="admin">
+            <input type="password" id="password" placeholder="Password" value="admin123">
+            <button onclick="login()">Login</button>
+        </div>
+        <div id="loginError" class="error"></div>
+        <div id="loginStatus" class="status"></div>
     </div>
 
-    <div class="chat-container">
+    <!-- Chat Interface -->
+    <div class="chat-container" id="chatContainer">
         <div class="sidebar">
             <h3>Groups</h3>
             <div>
@@ -60,6 +89,9 @@
                 <button onclick="joinGroup()">Join Group</button>
             </div>
             <div id="groupList"></div>
+            <div style="margin-top: 20px;">
+                <button onclick="logout()">Logout</button>
+            </div>
         </div>
 
         <div class="main">
@@ -81,31 +113,115 @@
     <script>
         let ws = null;
         let userId = '';
+        let token = '';
         const groups = new Set();
 
-        function connect() {
-            userId = document.getElementById('userId').value;
-            if (!userId) {
-                alert('Please enter a user ID');
-                return;
+        // Login function
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginError = document.getElementById('loginError');
+            const loginStatus = document.getElementById('loginStatus');
+
+            try {
+                const response = await fetch('http://localhost:8080/api/admin/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Login response:', data); // Debug log
+                
+                if (data.code === 0) {
+                    // Store the fresh token
+                    token = data.data.access_token;
+                    userId = username; // Use username as user ID for WebSocket connection
+                    
+                    console.log('New token obtained:', token.substring(0, 50) + '...');
+                    
+                    // Show chat interface
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('chatContainer').style.display = 'grid';
+                    
+                    // Connect WebSocket with the fresh token
+                    connectWebSocket();
+                    
+                    loginStatus.textContent = 'Login successful!';
+                    loginError.textContent = '';
+                } else {
+                    loginError.textContent = data.message || 'Login failed';
+                    loginStatus.textContent = '';
+                }
+            } catch (error) {
+                loginError.textContent = 'Login error: ' + error.message;
+                loginStatus.textContent = '';
+            }
+        }
+
+        // WebSocket connection
+        function connectWebSocket() {
+            if (ws) {
+                ws.close();
             }
 
-            ws = new WebSocket(`ws://${window.location.host}/api/admin/v1/ws?user_id=${userId}`);
+            console.log('Connecting WebSocket with userID:', userId);
+            console.log('Using token:', token.substring(0, 50) + '...');
+
+            ws = new WebSocket(`ws://localhost:8080/api/admin/v1/ws?user_id=${userId}&token=${token}`);
             
             ws.onopen = () => {
-                console.log('Connected to WebSocket');
-                document.getElementById('userId').disabled = true;
+                console.log('✅ WebSocket connected successfully!');
+                displayMessage({
+                    type: 3,
+                    content: '✅ Connected to WebSocket server',
+                    timestamp: Date.now() / 1000
+                });
             };
 
             ws.onmessage = (event) => {
+                console.log('📨 WebSocket message received:', event.data);
                 const message = JSON.parse(event.data);
                 displayMessage(message);
             };
 
-            ws.onclose = () => {
-                console.log('Disconnected from WebSocket');
-                document.getElementById('userId').disabled = false;
+            ws.onclose = (event) => {
+                console.log('❌ WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
+                displayMessage({
+                    type: 3,
+                    content: '❌ Disconnected from WebSocket server',
+                    timestamp: Date.now() / 1000
+                });
             };
+
+            ws.onerror = (error) => {
+                console.error('💥 WebSocket error:', error);
+                displayMessage({
+                    type: 3,
+                    content: '💥 WebSocket connection error - check console for details',
+                    timestamp: Date.now() / 1000
+                });
+            };
+        }
+
+        // Logout function
+        function logout() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            token = '';
+            userId = '';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('chatContainer').style.display = 'none';
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('groupList').innerHTML = '';
+            groups.clear();
         }
 
         function joinGroup() {
@@ -115,19 +231,38 @@
                 return;
             }
 
-            fetch(`/api/admin/v1/ws/join?user_id=${userId}&group_id=${groupId}`, {
-                method: 'POST'
+            fetch(`http://localhost:8080/api/admin/v1/ws/join?user_id=${userId}&group_id=${groupId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             })
             .then(response => response.json())
             .then(data => {
-                if (data.message) {
+                if (data.code === 0) {
                     groups.add(groupId);
                     updateGroupList();
+                    displayMessage({
+                        type: 3,
+                        content: `Joined group: ${groupId}`,
+                        timestamp: Date.now() / 1000
+                    });
+                } else {
+                    alert(data.message || 'Failed to join group');
                 }
+            })
+            .catch(error => {
+                console.error('Error joining group:', error);
+                alert('Error joining group');
             });
         }
 
         function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket is not connected');
+                return;
+            }
+
             const type = parseInt(document.getElementById('messageType').value);
             const to = document.getElementById('recipient').value;
             const content = document.getElementById('messageContent').value;
@@ -147,7 +282,7 @@
                 from: userId,
                 to: to,
                 content: content,
-                timestamp: Date.now()
+                timestamp: Date.now() / 1000
             };
 
             ws.send(JSON.stringify(message));
@@ -179,18 +314,25 @@
 
         function updateGroupList() {
             const groupList = document.getElementById('groupList');
-            groupList.innerHTML = Array.from(groups)
-                .map(group => `<div>Group: ${group}</div>`)
-                .join('');
+            groupList.innerHTML = '<h4>Joined Groups:</h4>';
+            groups.forEach(groupId => {
+                const div = document.createElement('div');
+                div.textContent = groupId;
+                groupList.appendChild(div);
+            });
         }
 
-        // Update message type change handler
-        document.getElementById('messageType').addEventListener('change', function(e) {
-            const recipientInput = document.getElementById('recipient');
-            if (e.target.value === '3') { // Announcement
-                recipientInput.style.display = 'none';
-            } else {
-                recipientInput.style.display = 'block';
+        // Add enter key support for login
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+
+        // Add enter key support for sending messages
+        document.getElementById('messageContent').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
             }
         });
     </script>

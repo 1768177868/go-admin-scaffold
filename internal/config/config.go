@@ -139,7 +139,7 @@ func LoadConfig() (*Config, error) {
 
 	// JWT
 	config.JWT.Secret = getEnvOrDefault("JWT_SECRET", viper.GetString("jwt.secret"))
-	config.JWT.ExpireTime = getEnvIntOrDefault("JWT_EXPIRE", viper.GetInt("jwt.expire"))
+	config.JWT.ExpireTime = getEnvIntOrDefault("JWT_EXPIRE", viper.GetInt("jwt.expire_time"))
 
 	// MySQL
 	config.MySQL.Host = getEnvOrDefault("DB_HOST", viper.GetString("mysql.host"))

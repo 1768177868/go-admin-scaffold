@@ -115,7 +115,7 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*TokenRespo
 	return &TokenResponse{
 		AccessToken: token,
 		TokenType:   "Bearer",
-		ExpiresIn:   s.config.JWT.ExpireTime * 3600, // Convert hours to seconds
+		ExpiresIn:   s.config.JWT.ExpireTime, // ExpireTime is already in seconds
 	}, nil
 }
 
@@ -128,7 +128,7 @@ func (s *AuthService) generateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":  user.ID,
 		"username": user.Username,
-		"exp":      time.Now().Add(time.Hour * time.Duration(s.config.JWT.ExpireTime)).Unix(),
+		"exp":      time.Now().Add(time.Second * time.Duration(s.config.JWT.ExpireTime)).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
