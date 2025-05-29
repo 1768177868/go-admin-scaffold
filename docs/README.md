@@ -6,83 +6,74 @@
 - [快速开始](getting-started/quick-start.md)
 - [项目结构](getting-started/structure.md)
 - [配置说明](getting-started/configuration.md)
-- [环境要求](getting-started/requirements.md)
-
-### 核心概念
-- [路由系统](core/routing.md)
-- [中间件](core/middleware.md)
-- [控制器](core/controllers.md)
-- [请求处理](core/requests.md)
-- [响应处理](core/responses.md)
-- [数据验证](core/validation.md)
-
-### 数据库
-- [数据库配置](database/configuration.md)
-- [查询构建器](database/query-builder.md)
-- [模型（Models）](database/models.md)
-- [迁移（Migrations）](database/migrations.md)
-- [数据填充（Seeders）](database/seeders.md)
 
 ### 功能特性
 - [用户认证](features/authentication.md)
-- [权限控制](features/authorization.md)
-- [文件上传](features/file-upload.md)
+- [角色权限](features/rbac.md)
 - [缓存系统](features/cache.md)
 - [任务调度](features/scheduling.md)
-- [WebSocket](features/websocket.md)
-- [国际化](features/localization.md)
-
-### 高级主题
-- [依赖注入](advanced/dependency-injection.md)
-- [事件系统](advanced/events.md)
-- [命令行工具](advanced/commands.md)
-- [日志系统](advanced/logging.md)
-- [错误处理](advanced/error-handling.md)
-
-### 部署
-- [部署指南](deployment/guide.md)
-- [性能优化](deployment/optimization.md)
-- [安全最佳实践](deployment/security.md)
 
 ### API 文档
 - [API 概述](api/overview.md)
-- [认证接口](api/auth.md)
-- [用户接口](api/users.md)
-- [角色权限接口](api/roles-permissions.md)
+- [API 参考](api/README.md)
 
-### 开发指南
-- [开发规范](development/standards.md)
-- [测试指南](development/testing.md)
-- [贡献指南](development/contributing.md)
-- [版本说明](development/changelog.md)
-
-# 项目文档
-
-## 目录
-
-### 功能文档
-- [用户管理](features/user-management.md)
-- [角色权限](features/rbac.md)
-- [日志管理](features/logging.md)
-
-### API 文档
-- [API 概览](api/overview.md)
-- [认证授权](api/authentication.md)
-- [错误处理](api/error-handling.md)
-
-### 数据库
-- [数据库设计](database/design.md)
-- [迁移管理](database/migrations.md)
-- [种子数据](database/seeders.md)
-
-### 开发指南
-- [编码规范](advanced/coding-standards.md)
+### 测试指南
 - [测试指南](testing.md)
-- [部署指南](advanced/deployment.md)
 
-### 示例
-- [API 调用示例](examples/api-examples.md)
-- [集成示例](examples/integration-examples.md)
+## 核心功能
+
+### 认证与授权
+- [认证系统](features/authentication.md)
+  - JWT Token 认证
+  - 刷新令牌机制
+  - 多端登录控制
+  - 登录日志记录
+
+- [权限控制](features/rbac.md)
+  - 基于角色的访问控制
+  - 权限管理
+  - 动态权限分配
+  - 权限缓存机制
+
+### 系统功能
+- [缓存与队列](features/cache.md)
+  - Redis 缓存管理
+  - 消息队列系统
+  - 分布式锁
+  - 数据同步
+
+- [任务调度](features/scheduling.md)
+  - 定时任务管理
+  - 异步任务处理
+  - 任务监控
+  - 失败重试机制
+
+### API 开发
+- [API 设计](api/overview.md)
+  - RESTful API 规范
+  - 请求/响应格式
+  - 错误处理
+  - 参数验证
+
+### 项目开发
+- [项目配置](getting-started/configuration.md)
+  - 环境配置
+  - 数据库配置
+  - 缓存配置
+  - 日志配置
+
+- [测试规范](testing.md)
+  - 单元测试
+  - 集成测试
+  - 性能测试
+  - 测试覆盖率
+
+## 快速链接
+
+- [项目主页](../README.md)
+- [API 文档](api/README.md)
+- [快速开始](getting-started/quick-start.md)
+- [测试指南](testing.md)
 
 ## 文档更新
 
@@ -90,4 +81,10 @@
 
 ## 贡献指南
 
-如果您想为项目文档做出贡献，请参考[贡献指南](CONTRIBUTING.md)。 
+如果您想为项目文档做出贡献，请遵循以下步骤：
+
+1. Fork 项目仓库
+2. 创建您的特性分支 (`git checkout -b feature/amazing-doc`)
+3. 提交您的改动 (`git commit -m 'Add some amazing doc'`)
+4. 推送到分支 (`git push origin feature/amazing-doc`)
+5. 创建一个 Pull Request 
