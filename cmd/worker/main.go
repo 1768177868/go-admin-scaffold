@@ -14,7 +14,7 @@ import (
 )
 
 type Worker struct {
-	queue    queue.Queue
+	queue    queue.QueueInterface
 	handlers map[string]JobHandler
 	stop     chan struct{}
 	wg       sync.WaitGroup
@@ -22,7 +22,7 @@ type Worker struct {
 
 type JobHandler func(ctx context.Context, payload []byte) error
 
-func NewWorker(q queue.Queue) *Worker {
+func NewWorker(q queue.QueueInterface) *Worker {
 	return &Worker{
 		queue:    q,
 		handlers: make(map[string]JobHandler),
@@ -67,22 +67,24 @@ func (w *Worker) process() {
 				}
 
 				handler := w.handlers[queueName]
-				if err := handler(ctx, job.Payload); err != nil {
-					log.Printf("Error processing job %s: %v", job.ID, err)
-					// Update job status to failed
-					job.Status = "failed"
-					job.Error = err.Error()
-					if job.Attempts < job.MaxRetry {
-						// Retry with exponential backoff
-						delay := time.Duration(job.Attempts*job.Attempts) * time.Second
-						if err := w.queue.Release(ctx, queueName, job.ID, delay); err != nil {
-							log.Printf("Error releasing job %s: %v", job.ID, err)
+				if err := handler(ctx, job.GetPayload()); err != nil {
+					log.Printf("Error processing job %s: %v", job.GetID(), err)
+					// Retry with exponential backoff if under max attempts
+					if job.GetAttempts() < job.GetMaxAttempts() {
+						delay := time.Duration(job.GetAttempts()*job.GetAttempts()) * time.Second
+						if err := w.queue.Release(ctx, queueName, job, delay); err != nil {
+							log.Printf("Error releasing job %s: %v", job.GetID(), err)
+						}
+					} else {
+						// Delete job if max attempts exceeded
+						if err := w.queue.Delete(ctx, queueName, job); err != nil {
+							log.Printf("Error deleting job %s: %v", job.GetID(), err)
 						}
 					}
 				} else {
 					// Delete successful job
-					if err := w.queue.Delete(ctx, queueName, job.ID); err != nil {
-						log.Printf("Error deleting job %s: %v", job.ID, err)
+					if err := w.queue.Delete(ctx, queueName, job); err != nil {
+						log.Printf("Error deleting job %s: %v", job.GetID(), err)
 					}
 				}
 			}
@@ -98,7 +100,7 @@ func main() {
 	}
 
 	// Create queue instance
-	q, err := queue.New(&queue.Config{
+	q, err := queue.New(queue.Config{
 		Driver:  cfg.Queue.Driver,
 		Options: cfg.Queue.Options,
 	})

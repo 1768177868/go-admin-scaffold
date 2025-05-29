@@ -10,10 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type mysqlQueue struct {
-	db *gorm.DB
-}
-
 // MySQLJob represents a job in the MySQL database
 type MySQLJob struct {
 	ID        string `gorm:"primaryKey;type:varchar(36)"`
@@ -34,11 +30,19 @@ func (MySQLJob) TableName() string {
 }
 
 func init() {
-	Register("mysql", NewMySQLQueue)
+	Register("mysql", func(config Config) (QueueInterface, error) {
+		return NewMySQLQueue(config)
+	})
 }
 
-// NewMySQLQueue creates a new MySQL queue instance
-func NewMySQLQueue(config *Config) (Queue, error) {
+// MySQLQueue MySQL队列驱动
+type MySQLQueue struct {
+	db     *gorm.DB
+	config Config
+}
+
+// NewMySQLQueue 创建MySQL队列驱动
+func NewMySQLQueue(config Config) (*MySQLQueue, error) {
 	db, ok := config.Options["db"].(*gorm.DB)
 	if !ok {
 		return nil, fmt.Errorf("mysql queue requires a *gorm.DB instance")
@@ -49,49 +53,128 @@ func NewMySQLQueue(config *Config) (Queue, error) {
 		return nil, err
 	}
 
-	return &mysqlQueue{
-		db: db,
+	return &MySQLQueue{
+		db:     db,
+		config: config,
 	}, nil
 }
 
-func (q *mysqlQueue) Push(ctx context.Context, queueName string, payload interface{}, opts ...JobOption) error {
-	// Apply options
-	options := &jobOptions{
-		MaxRetry: 3, // default max retry
-	}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	// Marshal payload
-	data, err := json.Marshal(payload)
+// Push 推送任务到队列
+func (q *MySQLQueue) Push(ctx context.Context, job JobInterface) error {
+	payload, err := json.Marshal(job)
 	if err != nil {
 		return err
 	}
 
-	job := &MySQLJob{
-		ID:        uuid.New().String(),
-		Queue:     queueName,
-		Payload:   string(data),
-		MaxRetry:  options.MaxRetry,
+	queue := job.GetQueue()
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	mysqlJob := &MySQLJob{
+		ID:        job.GetID(),
+		Queue:     queue,
+		Payload:   string(payload),
+		Attempts:  job.GetAttempts(),
+		MaxRetry:  job.GetMaxAttempts(),
 		Status:    "pending",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
-	if options.Delay > 0 {
-		job.CreatedAt = time.Now().Add(options.Delay)
+	if job.GetDelay() > 0 {
+		mysqlJob.CreatedAt = time.Now().Add(job.GetDelay())
 	}
 
-	return q.db.WithContext(ctx).Create(job).Error
+	return q.db.WithContext(ctx).Create(mysqlJob).Error
 }
 
-func (q *mysqlQueue) Pop(ctx context.Context, queueName string) (*Job, error) {
+// PushRaw 推送原始数据到队列
+func (q *MySQLQueue) PushRaw(ctx context.Context, queue string, payload []byte, options map[string]interface{}) error {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	delay := time.Duration(0)
+	if v, ok := options["delay"].(time.Duration); ok {
+		delay = v
+	}
+
+	maxAttempts := 3
+	if v, ok := options["max_attempts"].(int); ok {
+		maxAttempts = v
+	}
+
+	mysqlJob := &MySQLJob{
+		ID:        uuid.New().String(),
+		Queue:     queue,
+		Payload:   string(payload),
+		MaxRetry:  maxAttempts,
+		Status:    "pending",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if delay > 0 {
+		mysqlJob.CreatedAt = time.Now().Add(delay)
+	}
+
+	return q.db.WithContext(ctx).Create(mysqlJob).Error
+}
+
+// Later 延迟推送任务
+func (q *MySQLQueue) Later(ctx context.Context, job JobInterface, delay time.Duration) error {
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+
+	queue := job.GetQueue()
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	mysqlJob := &MySQLJob{
+		ID:        job.GetID(),
+		Queue:     queue,
+		Payload:   string(payload),
+		Attempts:  job.GetAttempts(),
+		MaxRetry:  job.GetMaxAttempts(),
+		Status:    "pending",
+		CreatedAt: time.Now().Add(delay),
+		UpdatedAt: time.Now(),
+	}
+
+	return q.db.WithContext(ctx).Create(mysqlJob).Error
+}
+
+// Pop 从队列中取出任务
+func (q *MySQLQueue) Pop(ctx context.Context, queue string) (JobInterface, error) {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return nil, fmt.Errorf("queue name not found in options")
+		}
+	}
+
 	var mysqlJob MySQLJob
 
 	err := q.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Get the next available job
-		if err := tx.Where("queue = ? AND status = ? AND created_at <= ?", queueName, "pending", time.Now()).
+		if err := tx.Where("queue = ? AND status = ? AND created_at <= ?", queue, "pending", time.Now()).
 			Order("created_at ASC").
 			First(&mysqlJob).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -112,76 +195,92 @@ func (q *mysqlQueue) Pop(ctx context.Context, queueName string) (*Job, error) {
 		return nil, err
 	}
 
-	return &Job{
-		ID:        mysqlJob.ID,
-		Queue:     mysqlJob.Queue,
-		Payload:   json.RawMessage(mysqlJob.Payload),
-		Attempts:  mysqlJob.Attempts,
-		MaxRetry:  mysqlJob.MaxRetry,
-		Status:    mysqlJob.Status,
-		Error:     mysqlJob.Error,
-		CreatedAt: mysqlJob.CreatedAt,
-		UpdatedAt: mysqlJob.UpdatedAt,
-	}, nil
-}
-
-func (q *mysqlQueue) Delete(ctx context.Context, queueName, jobID string) error {
-	return q.db.WithContext(ctx).Where("queue = ? AND id = ?", queueName, jobID).Delete(&MySQLJob{}).Error
-}
-
-func (q *mysqlQueue) Release(ctx context.Context, queueName, jobID string, delay time.Duration) error {
-	updates := map[string]interface{}{
-		"status":     "pending",
-		"created_at": time.Now().Add(delay),
-		"updated_at": time.Now(),
-	}
-	return q.db.WithContext(ctx).Model(&MySQLJob{}).Where("queue = ? AND id = ?", queueName, jobID).Updates(updates).Error
-}
-
-func (q *mysqlQueue) Clear(ctx context.Context, queueName string) error {
-	return q.db.WithContext(ctx).Where("queue = ?", queueName).Delete(&MySQLJob{}).Error
-}
-
-func (q *mysqlQueue) Size(ctx context.Context, queueName string) (int64, error) {
-	var count int64
-	err := q.db.WithContext(ctx).Model(&MySQLJob{}).Where("queue = ? AND status = ?", queueName, "pending").Count(&count).Error
-	return count, err
-}
-
-func (q *mysqlQueue) Failed(ctx context.Context, queueName string) ([]*Job, error) {
-	var mysqlJobs []MySQLJob
-	err := q.db.WithContext(ctx).Where("queue = ? AND status = ?", queueName, "failed").Find(&mysqlJobs).Error
-	if err != nil {
+	var job BaseJob
+	if err := json.Unmarshal([]byte(mysqlJob.Payload), &job); err != nil {
 		return nil, err
 	}
 
-	jobs := make([]*Job, len(mysqlJobs))
-	for i, mysqlJob := range mysqlJobs {
-		jobs[i] = &Job{
-			ID:        mysqlJob.ID,
-			Queue:     mysqlJob.Queue,
-			Payload:   json.RawMessage(mysqlJob.Payload),
-			Attempts:  mysqlJob.Attempts,
-			MaxRetry:  mysqlJob.MaxRetry,
-			Status:    mysqlJob.Status,
-			Error:     mysqlJob.Error,
-			CreatedAt: mysqlJob.CreatedAt,
-			UpdatedAt: mysqlJob.UpdatedAt,
+	job.SetID(mysqlJob.ID)
+	job.SetAttempts(mysqlJob.Attempts)
+
+	return &job, nil
+}
+
+// Size 获取队列大小
+func (q *MySQLQueue) Size(ctx context.Context, queue string) (int64, error) {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return 0, fmt.Errorf("queue name not found in options")
 		}
 	}
 
-	return jobs, nil
+	var count int64
+	err := q.db.WithContext(ctx).Model(&MySQLJob{}).
+		Where("queue = ? AND status = ?", queue, "pending").
+		Count(&count).Error
+	return count, err
 }
 
-func (q *mysqlQueue) Retry(ctx context.Context, queueName, jobID string) error {
+// Delete 删除任务
+func (q *MySQLQueue) Delete(ctx context.Context, queue string, job JobInterface) error {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	return q.db.WithContext(ctx).Where("queue = ? AND id = ?", queue, job.GetID()).Delete(&MySQLJob{}).Error
+}
+
+// Release 释放任务回队列
+func (q *MySQLQueue) Release(ctx context.Context, queue string, job JobInterface, delay time.Duration) error {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	// 增加重试次数
+	attempts := job.GetAttempts() + 1
+
+	// 如果超过最大重试次数，直接删除
+	if attempts >= job.GetMaxAttempts() {
+		return q.Delete(ctx, queue, job)
+	}
+
 	updates := map[string]interface{}{
 		"status":     "pending",
+		"attempts":   attempts,
+		"created_at": time.Now().Add(delay),
 		"updated_at": time.Now(),
 	}
-	return q.db.WithContext(ctx).Model(&MySQLJob{}).Where("queue = ? AND id = ?", queueName, jobID).Updates(updates).Error
+
+	return q.db.WithContext(ctx).Model(&MySQLJob{}).
+		Where("queue = ? AND id = ?", queue, job.GetID()).
+		Updates(updates).Error
 }
 
-func (q *mysqlQueue) Close() error {
+// Clear 清空队列
+func (q *MySQLQueue) Clear(ctx context.Context, queue string) error {
+	if queue == "" {
+		if queueOpt, ok := q.config.Options["queue"].(string); ok {
+			queue = queueOpt
+		} else {
+			return fmt.Errorf("queue name not found in options")
+		}
+	}
+
+	return q.db.WithContext(ctx).Where("queue = ?", queue).Delete(&MySQLJob{}).Error
+}
+
+// Close 关闭队列连接
+func (q *MySQLQueue) Close() error {
 	sqlDB, err := q.db.DB()
 	if err != nil {
 		return err

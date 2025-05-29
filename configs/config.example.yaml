@@ -46,12 +46,63 @@ cache:
     db: 0
 
 queue:
-  driver: "redis"  # redis, memory
-  options:
-    host: "localhost"
-    port: 6379
-    password: ""
-    db: 1
+  # 默认驱动: redis, database, mysql
+  driver: "redis"
+  # 默认队列名称
+  queue: "default"
+  # 连接配置 (使用已配置的redis和mysql连接)
+  connection:
+    redis: "redis://{{.redis.host}}:{{.redis.port}}/{{.redis.db}}"
+    database: "mysql://{{.mysql.username}}:{{.mysql.password}}@{{.mysql.host}}:{{.mysql.port}}/{{.mysql.database}}?charset=utf8mb4&parseTime=True&loc=Local"
+    mysql: "mysql://{{.mysql.username}}:{{.mysql.password}}@{{.mysql.host}}:{{.mysql.port}}/{{.mysql.database}}?charset=utf8mb4&parseTime=True&loc=Local"
+  # 工作进程配置
+  worker:
+    # 无任务时休眠时间(秒)
+    sleep: 3
+    # 最大处理任务数(0表示无限制)
+    max_jobs: 0
+    # 最大运行时间(0表示无限制)
+    max_time: 0
+    # 处理完一个任务后休息时间(秒)
+    rest: 0
+    # 内存限制(MB)
+    memory: 128
+    # 任务最大重试次数
+    tries: 3
+    # 任务超时时间(秒)
+    timeout: 60
+  # 队列配置
+  queues:
+    # 默认队列
+    default:
+      # 队列优先级(数字越大优先级越高)
+      priority: 1
+      # 队列处理进程数
+      processes: 1
+      # 队列超时时间(秒)
+      timeout: 60
+      # 队列重试次数
+      tries: 3
+      # 队列重试等待时间(秒)
+      retry_after: 60
+      # 队列退避策略(秒)
+      backoff: [60, 300, 900]
+    # 高优先级队列
+    high:
+      priority: 2
+      processes: 2
+      timeout: 30
+      tries: 5
+      retry_after: 30
+      backoff: [30, 60, 180]
+    # 低优先级队列
+    low:
+      priority: 0
+      processes: 1
+      timeout: 120
+      tries: 2
+      retry_after: 120
+      backoff: [120, 300, 600]
 
 log:
   level: "debug"  # debug, info, warn, error
