@@ -69,9 +69,51 @@ func (m *Manager) Start() {
 		case client := <-m.Unregister:
 			if _, ok := m.Clients[client.ID]; ok {
 				m.mu.Lock()
+				// Leave all groups before unregistering
+				for groupID := range client.Groups {
+					if group, exists := m.Groups[groupID]; exists {
+						// Remove client from group
+						delete(group, client.ID)
+
+						// If group is empty, delete it
+						if len(group) == 0 {
+							delete(m.Groups, groupID)
+							log.Printf("Group %s deleted as it's empty", groupID)
+						} else {
+							// Notify other group members
+							notifyMsg := &Message{
+								Type:      MessageTypeAnnouncement,
+								From:      client.ID,
+								Content:   fmt.Sprintf("用户 %s 离开了群组（断开连接）", client.ID),
+								Timestamp: time.Now().Unix(),
+							}
+
+							data, err := json.Marshal(notifyMsg)
+							if err == nil {
+								for memberID := range group {
+									if member, ok := m.Clients[memberID]; ok {
+										select {
+										case member.Send <- data:
+											log.Printf("Disconnect notification sent to %s", memberID)
+										default:
+											log.Printf("Failed to send disconnect notification to %s", memberID)
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// Clear client's groups
+				client.Groups = make(map[string]bool)
+
+				// Remove client from clients map and close send channel
 				delete(m.Clients, client.ID)
 				close(client.Send)
 				m.mu.Unlock()
+
+				log.Printf("Client %s unregistered and removed from all groups", client.ID)
 			}
 
 		case message := <-m.Broadcast:

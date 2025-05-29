@@ -219,6 +219,10 @@
         let userId = '';
         let token = '';
         const groups = new Set();
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000; // 3 seconds
+        let reconnectTimeout = null;
 
         // Login function
         async function login() {
@@ -279,6 +283,27 @@
             ws.onopen = () => {
                 console.log('✅ WebSocket connected successfully!');
                 displaySystemMessage('✅ Connected to WebSocket server', userId);
+                reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+                
+                // 重新加入之前的群组
+                groups.forEach(groupId => {
+                    fetch(`http://localhost:8080/api/admin/v1/ws/join?user_id=${userId}&group_id=${groupId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.code === 0) {
+                            displaySystemMessage(`重新加入群组：${groupId}`, userId);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('重新加入群组失败：', error);
+                        displaySystemMessage(`重新加入群组失败：${error.message}`, userId);
+                    });
+                });
             };
 
             ws.onmessage = (event) => {
@@ -295,6 +320,25 @@
             ws.onclose = (event) => {
                 console.log('❌ WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
                 displaySystemMessage('❌ Disconnected from WebSocket server', userId);
+                
+                // Clear any existing reconnect timeout
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                }
+                
+                // Attempt to reconnect if not manually closed and not reached max attempts
+                if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = reconnectDelay * Math.pow(2, reconnectAttempts - 1); // Exponential backoff
+                    displaySystemMessage(`🔄 Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${delay/1000} seconds...`, userId);
+                    
+                    reconnectTimeout = setTimeout(() => {
+                        displaySystemMessage('🔄 Reconnecting...', userId);
+                        connectWebSocket();
+                    }, delay);
+                } else if (reconnectAttempts >= maxReconnectAttempts) {
+                    displaySystemMessage('❌ Maximum reconnection attempts reached. Please refresh the page.', userId);
+                }
             };
 
             ws.onerror = (error) => {
@@ -305,8 +349,12 @@
 
         // Logout function
         function logout() {
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
             if (ws) {
-                ws.close();
+                ws.close(1000); // Use 1000 for normal closure
                 ws = null;
             }
             token = '';
