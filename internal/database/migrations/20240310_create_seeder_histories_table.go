@@ -20,9 +20,13 @@ func init() {
 				return err
 			}
 
-			// Add index
-			if err := tx.Exec("CREATE INDEX idx_seeder_histories_executed_at ON seeder_histories(executed_at)").Error; err != nil {
-				return err
+			// Add index (check if it exists first)
+			var count int64
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'seeder_histories' AND index_name = 'idx_seeder_histories_executed_at'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_seeder_histories_executed_at ON seeder_histories(executed_at)").Error; err != nil {
+					return err
+				}
 			}
 
 			return nil

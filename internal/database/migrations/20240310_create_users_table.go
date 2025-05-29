@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	migrations["20240310_create_users_table"] = &MigrationDefinition{
+	Register("20240310_create_users_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type User struct {
 				ID        uint   `gorm:"primarykey"`
@@ -28,12 +28,23 @@ func init() {
 				return err
 			}
 
-			// Add indexes
-			if err := tx.Exec("CREATE INDEX idx_users_email ON users(email)").Error; err != nil {
-				return err
+			// Add indexes (check if they exist first)
+			var count int64
+
+			// Check and create idx_users_email
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_users_email'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_users_email ON users(email)").Error; err != nil {
+					return err
+				}
 			}
-			if err := tx.Exec("CREATE INDEX idx_users_status ON users(status)").Error; err != nil {
-				return err
+
+			// Check and create idx_users_status
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_users_status'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_users_status ON users(status)").Error; err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -50,5 +61,5 @@ func init() {
 			// Drop table
 			return tx.Migrator().DropTable("users")
 		},
-	}
+	})
 }

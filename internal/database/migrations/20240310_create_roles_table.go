@@ -26,12 +26,23 @@ func init() {
 				return err
 			}
 
-			// Add indexes
-			if err := tx.Exec("CREATE INDEX idx_roles_code ON roles(code)").Error; err != nil {
-				return err
+			// Add indexes (check if they exist first)
+			var count int64
+
+			// Check and create idx_roles_code
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'roles' AND index_name = 'idx_roles_code'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_roles_code ON roles(code)").Error; err != nil {
+					return err
+				}
 			}
-			if err := tx.Exec("CREATE INDEX idx_roles_status ON roles(status)").Error; err != nil {
-				return err
+
+			// Check and create idx_roles_status
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'roles' AND index_name = 'idx_roles_status'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_roles_status ON roles(status)").Error; err != nil {
+					return err
+				}
 			}
 
 			return nil

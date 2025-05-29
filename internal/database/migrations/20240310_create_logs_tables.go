@@ -49,26 +49,43 @@ func init() {
 				return err
 			}
 
-			// Add indexes for login_logs
-			if err := tx.Exec("CREATE INDEX idx_login_logs_login_time ON login_logs(login_time)").Error; err != nil {
-				return err
-			}
-			if err := tx.Exec("CREATE INDEX idx_login_logs_status ON login_logs(status)").Error; err != nil {
-				return err
+			// Add indexes for login_logs (check if they exist first)
+			var count int64
+
+			// Check and create idx_login_logs_login_time
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'login_logs' AND index_name = 'idx_login_logs_login_time'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_login_logs_login_time ON login_logs(login_time)").Error; err != nil {
+					return err
+				}
 			}
 
-			// Add indexes for operation_logs
-			if err := tx.Exec("CREATE INDEX idx_operation_logs_operation_time ON operation_logs(operation_time)").Error; err != nil {
-				return err
+			// Check and create idx_login_logs_status
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'login_logs' AND index_name = 'idx_login_logs_status'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_login_logs_status ON login_logs(status)").Error; err != nil {
+					return err
+				}
 			}
-			if err := tx.Exec("CREATE INDEX idx_operation_logs_module ON operation_logs(module)").Error; err != nil {
-				return err
+
+			// Add indexes for operation_logs (check if they exist first)
+			indexQueries := []struct {
+				name  string
+				query string
+			}{
+				{"idx_operation_logs_operation_time", "CREATE INDEX idx_operation_logs_operation_time ON operation_logs(operation_time)"},
+				{"idx_operation_logs_module", "CREATE INDEX idx_operation_logs_module ON operation_logs(module)"},
+				{"idx_operation_logs_action", "CREATE INDEX idx_operation_logs_action ON operation_logs(action)"},
+				{"idx_operation_logs_status", "CREATE INDEX idx_operation_logs_status ON operation_logs(status)"},
 			}
-			if err := tx.Exec("CREATE INDEX idx_operation_logs_action ON operation_logs(action)").Error; err != nil {
-				return err
-			}
-			if err := tx.Exec("CREATE INDEX idx_operation_logs_status ON operation_logs(status)").Error; err != nil {
-				return err
+
+			for _, idx := range indexQueries {
+				tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'operation_logs' AND index_name = ?", idx.name).Scan(&count)
+				if count == 0 {
+					if err := tx.Exec(idx.query).Error; err != nil {
+						return err
+					}
+				}
 			}
 
 			return nil
