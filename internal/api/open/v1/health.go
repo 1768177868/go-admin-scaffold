@@ -10,7 +10,7 @@ import (
 // HealthCheck handles health check requests
 func HealthCheck(c *gin.Context) {
 	// Check database connection
-	if err := database.DB().Raw("SELECT 1").Error; err != nil {
+	if err := database.GetDB().Raw("SELECT 1").Error; err != nil {
 		response.Error(c, response.CodeServerError, "Database connection error")
 		return
 	}

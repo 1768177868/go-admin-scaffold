@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
+	"app/internal/bootstrap"
 	"app/internal/commands"
 	"app/internal/config"
 	"app/pkg/console"
-	"app/pkg/database"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	}
 
 	// Initialize database
-	if err := database.Init(cfg); err != nil {
+	if err := bootstrap.SetupDatabase(cfg); err != nil {
 		log.Fatal(err)
 	}
 

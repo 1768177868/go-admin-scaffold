@@ -65,14 +65,33 @@ jwt:
 # 创建数据库
 mysql -u root -p -e "CREATE DATABASE go_admin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 运行数据库迁移和初始化数据
-go run cmd/migrate/main.go -seed
+# 查看迁移状态
+go run cmd/tools/main.go migrate status
+
+# 运行所有待处理的迁移
+go run cmd/tools/main.go migrate run
+
+# 填充初始数据
+go run cmd/tools/main.go seed run
+
+# 其他可用命令：
+go run cmd/tools/main.go migrate rollback  # 回滚最后一批迁移
+go run cmd/tools/main.go migrate reset     # 重置所有迁移
+go run cmd/tools/main.go migrate refresh   # 重置并重新运行所有迁移
+go run cmd/tools/main.go seed status      # 查看数据填充状态
 ```
 
-初始化后会创建默认管理员账户：
+初始化后会创建以下默认账户：
+
+管理员账户：
 - 用户名：admin
 - 密码：admin123
 - 角色：管理员（具有所有权限）
+
+测试账户：
+- 用户名：test1/test2
+- 密码：admin123
+- 角色：普通用户（基础权限）
 
 5. 启动服务：
 

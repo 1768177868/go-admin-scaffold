@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"app/cmd/server/setup"
+	"app/internal/bootstrap"
 	"app/internal/commands"
 	"app/internal/config"
 	"app/internal/schedule"
 	"app/pkg/console"
-	"app/pkg/database"
 	"app/pkg/locker"
 
 	"github.com/redis/go-redis/v9"
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Initialize database
-	if err := database.Init(cfg); err != nil {
+	if err := bootstrap.SetupDatabase(cfg); err != nil {
 		log.Fatal(err)
 	}
 

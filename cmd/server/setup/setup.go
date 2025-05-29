@@ -2,9 +2,9 @@ package setup
 
 import (
 	"app/internal/api/admin/middleware"
+	"app/internal/bootstrap"
 	"app/internal/config"
 	"app/internal/routes"
-	"app/pkg/database"
 	"app/pkg/i18n"
 	"app/pkg/logger"
 
@@ -40,7 +40,7 @@ func InitializeApp() (*App, error) {
 	}
 
 	// Initialize database
-	if err := database.Init(cfg); err != nil {
+	if err := bootstrap.SetupDatabase(cfg); err != nil {
 		return nil, err
 	}
 

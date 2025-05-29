@@ -23,7 +23,7 @@ func Seed() error {
 
 // seedUsers seeds the users table
 func seedUsers() error {
-	db := database.DB()
+	db := database.GetDB()
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
@@ -45,7 +45,7 @@ func seedUsers() error {
 
 // seedRoles seeds the roles table
 func seedRoles() error {
-	db := database.DB()
+	db := database.GetDB()
 
 	roles := []models.Role{
 		{Name: "admin", DisplayName: "Administrator", Description: "System Administrator"},
@@ -63,7 +63,7 @@ func seedRoles() error {
 
 // seedPermissions seeds the permissions table
 func seedPermissions() error {
-	db := database.DB()
+	db := database.GetDB()
 
 	permissions := []models.Permission{
 		{Name: "users.manage", DisplayName: "Manage Users", Description: "Can manage users"},

@@ -5,6 +5,7 @@ import (
 
 	"app/internal/database/migrations"
 	"app/pkg/console"
+	"app/pkg/database"
 )
 
 type MigrateCommand struct {
@@ -24,5 +25,7 @@ func (c *MigrateCommand) Configure(config *console.CommandConfig) {
 }
 
 func (c *MigrateCommand) Handle(ctx context.Context) error {
-	return migrations.Migrate()
+	db := database.GetDB()
+	migrator := migrations.InitMigrations(db)
+	return migrator.RunPending()
 }

@@ -4,8 +4,10 @@ import (
 	"flag"
 	"log"
 
+	"app/internal/bootstrap"
 	"app/internal/config"
 	"app/internal/database/migrations"
+	"app/internal/database/seeders"
 	"app/pkg/database"
 )
 
@@ -21,20 +23,20 @@ func main() {
 	}
 
 	// Initialize database connection
-	if err := database.Init(cfg); err != nil {
+	if err := bootstrap.SetupDatabase(cfg); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.Close()
 
 	// Run migrations
-	if err := migrations.Migrate(); err != nil {
+	db := migrations.InitMigrations(database.GetDB())
+	if err := db.RunPending(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 	log.Println("Migrations completed successfully")
 
 	// Run seeding if flag is set
 	if *seedFlag {
-		if err := migrations.Seed(); err != nil {
+		if err := seeders.Seed(); err != nil {
 			log.Fatalf("Failed to run seeding: %v", err)
 		}
 		log.Println("Seeding completed successfully")

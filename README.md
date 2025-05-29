@@ -52,7 +52,23 @@ cp configs/config.example.yaml configs/config.yaml
 vim configs/config.yaml
 ```
 
-4. Run the application:
+4. Set up the database:
+```bash
+# Run all pending migrations
+go run cmd/tools/main.go migrate run
+
+# Run database seeding
+go run cmd/tools/main.go seed run
+
+# Other available commands:
+go run cmd/tools/main.go migrate status    # Check migration status
+go run cmd/tools/main.go migrate rollback  # Rollback last batch of migrations
+go run cmd/tools/main.go migrate reset     # Reset all migrations
+go run cmd/tools/main.go migrate refresh   # Reset and re-run all migrations
+go run cmd/tools/main.go seed status      # Check seeding status
+```
+
+5. Run the application:
 ```bash
 go run cmd/server/main.go
 ```
