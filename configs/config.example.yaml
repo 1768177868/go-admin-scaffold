@@ -46,7 +46,7 @@ cache:
     db: 0
 
 queue:
-  # 默认驱动: redis, database, mysql
+  # 默认驱动: redis, database
   driver: "redis"
   # 默认队列名称
   queue: "default"
@@ -54,7 +54,6 @@ queue:
   connection:
     redis: "redis://{{.redis.host}}:{{.redis.port}}/{{.redis.db}}"
     database: "mysql://{{.mysql.username}}:{{.mysql.password}}@{{.mysql.host}}:{{.mysql.port}}/{{.mysql.database}}?charset=utf8mb4&parseTime=True&loc=Local"
-    mysql: "mysql://{{.mysql.username}}:{{.mysql.password}}@{{.mysql.host}}:{{.mysql.port}}/{{.mysql.database}}?charset=utf8mb4&parseTime=True&loc=Local"
   # 工作进程配置
   worker:
     # 无任务时休眠时间(秒)
