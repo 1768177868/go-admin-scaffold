@@ -4,32 +4,31 @@
 
 ## 迁移功能
 
-### 创建迁移
-
-使用命令行工具创建迁移文件：
-
-```bash
-# 创建新的迁移文件
-go run cmd/tools/main.go make:migration create_users_table
-
-# 创建带外键的迁移文件
-go run cmd/tools/main.go make:migration add_role_id_to_users
-```
-
 ### 迁移文件结构
+
+本项目已包含完整的迁移文件，位于 `internal/database/migrations/` 目录：
 
 ```go
 func init() {
-    migrations["20240310_create_users_table"] = &MigrationDefinition{
+    Register("20240301_create_users_table", &MigrationDefinition{
         Up: func(tx *gorm.DB) error {
             // 创建表结构
+            type User struct {
+                ID        uint   `gorm:"primarykey"`
+                Username  string `gorm:"size:50;not null;unique"`
+                Email     string `gorm:"size:100;not null;unique"`
+                Status    int    `gorm:"default:1"`
+                CreatedAt time.Time
+                UpdatedAt time.Time
+                DeletedAt gorm.DeletedAt `gorm:"index"`
+            }
             return tx.AutoMigrate(&User{})
         },
         Down: func(tx *gorm.DB) error {
             // 回滚操作
             return tx.Migrator().DropTable("users")
         },
-    }
+    })
 }
 ```
 
@@ -54,16 +53,21 @@ go run cmd/tools/main.go migrate refresh
 
 ## 数据填充
 
-### 创建填充器
+### 填充器结构
+
+本项目已包含完整的RBAC系统填充器，位于 `internal/database/seeders/` 目录：
 
 ```go
 func init() {
-    Register("users", &Seeder{
+    Register("users", &seeder.Seeder{
         Name: "users",
         Description: "Create default users",
         Dependencies: []string{"roles"}, // 依赖于roles填充器
         Run: func(tx *gorm.DB) error {
-            // 填充数据
+            // 填充数据逻辑
+            users := []models.User{
+                {Username: "admin", Email: "admin@example.com"},
+            }
             return tx.Create(&users).Error
         },
     })
@@ -85,6 +89,50 @@ go run cmd/tools/main.go seed run users roles
 # 重置填充数据
 go run cmd/tools/main.go seed reset
 ```
+
+## 现有数据库结构
+
+本项目包含完整的RBAC系统数据库结构：
+
+### 核心表
+
+1. **users** - 用户表
+   - 基础用户信息
+   - 认证凭据
+   - 状态管理
+
+2. **roles** - 角色表
+   - 角色定义
+   - 角色状态
+
+3. **permissions** - 权限表
+   - 权限名称和描述
+   - 模块化权限管理
+   - 动作和资源定义
+
+4. **user_roles** - 用户角色关联表
+   - 多对多关系
+   - 支持用户多角色
+
+5. **role_permissions** - 角色权限关联表
+   - 角色权限绑定
+   - 权限继承
+
+### 日志表
+
+6. **login_logs** - 登录日志
+   - 登录记录追踪
+   - 安全审计
+
+7. **operation_logs** - 操作日志
+   - 用户操作记录
+   - 系统行为追踪
+
+### 系统表
+
+8. **seeder_histories** - 种子执行历史
+   - 防止重复执行
+   - 填充状态追踪
 
 ## 最佳实践
 

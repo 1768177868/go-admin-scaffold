@@ -17,10 +17,12 @@ type RedisStore struct {
 
 // NewRedisStore creates a new Redis cache store
 func NewRedisStore(config *Config) (*RedisStore, error) {
+	redisConfig := config.GetRedisConfig()
+
 	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port),
-		Password: config.Redis.Password,
-		DB:       config.Redis.DB,
+		Addr:     fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port),
+		Password: redisConfig.Password,
+		DB:       redisConfig.DB,
 	})
 
 	// Test connection

@@ -24,7 +24,6 @@ vendor/
 # Environment files
 .env
 .env.*
-!.env.example
 
 # Log files
 logs/
@@ -43,11 +42,14 @@ Thumbs.db
 bin/
 dist/
 
-# Config files
-/configs/config.yaml
-/configs/*.yaml
+# Configuration files
+configs/config.yaml
 !configs/config.example.yaml
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Runtime directories
+storage/
+logs/

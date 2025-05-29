@@ -36,27 +36,37 @@ vim configs/config.yaml
 
 ```yaml
 app:
-  name: go-admin
-  mode: development
+  name: "Go Admin"
+  env: "development"
+  mode: "development"
+  debug: true
+  baseUrl: "http://localhost:8080"
+  api_prefix: "/api/v1"
   port: 8080
 
-database:
-  driver: mysql
-  host: localhost
+server:
+  address: "0.0.0.0:8080"
+  mode: "debug"
+
+mysql:
+  host: "localhost"
   port: 3306
-  database: go_admin
-  username: root
-  password: your_password
+  username: "root"
+  password: "your_password"
+  database: "go_admin"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
 
 redis:
-  host: localhost
+  host: "localhost"
   port: 6379
   password: ""
   db: 0
 
 jwt:
-  secret: your-secret-key
-  expire: 24h
+  secret: "your-secret-key-here"  # Change this in production
+  expire_time: 86400  # 24 hours
 ```
 
 4. 初始化数据库：

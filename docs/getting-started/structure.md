@@ -244,9 +244,11 @@ tests/
 ```
 /var/www/go-admin/     # 应用根目录
 ├── bin/              # 编译后的二进制文件
-├── config/           # 配置文件
+├── configs/          # 配置文件目录
+│   ├── config.yaml   # 实际配置文件
+│   └── config.example.yaml  # 配置示例文件
 ├── storage/          # 存储目录
 │   ├── logs/        # 日志文件
 │   └── uploads/     # 上传文件
-└── .env             # 环境变量
+└── README.md        # 项目说明
 ``` 

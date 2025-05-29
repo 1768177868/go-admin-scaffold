@@ -26,7 +26,7 @@ type FileStore struct {
 
 // NewFileStore creates a new file cache store
 func NewFileStore(config *Config) (*FileStore, error) {
-	dir := config.FilePath
+	dir := config.GetFilePath()
 	if dir == "" {
 		dir = "storage/cache"
 	}
@@ -216,8 +216,10 @@ func (s *FileStore) save() error {
 }
 
 func (s *FileStore) load() error {
-	file, err := os.Open(s.getCacheFile())
+	filePath := s.getCacheFile()
+	file, err := os.Open(filePath)
 	if os.IsNotExist(err) {
+		// 文件不存在是正常情况，不算错误
 		return nil
 	}
 	if err != nil {
@@ -225,8 +227,27 @@ func (s *FileStore) load() error {
 	}
 	defer file.Close()
 
+	// 检查文件大小，避免读取空文件
+	stat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if stat.Size() == 0 {
+		// 空文件，不需要解码
+		return nil
+	}
+
 	decoder := gob.NewDecoder(file)
-	return decoder.Decode(&s.items)
+	err = decoder.Decode(&s.items)
+	if err != nil {
+		// 如果解码失败，可能是文件损坏，删除文件并重新开始
+		file.Close()
+		os.Remove(filePath)
+		s.items = make(map[string]item)
+		return nil
+	}
+
+	return nil
 }
 
 func (s *FileStore) getCacheFile() string {

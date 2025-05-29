@@ -1,78 +1,96 @@
 # 配置系统
 
-本框架采用分层配置系统，支持多环境配置、环境变量覆盖和默认值。
+本框架采用简洁的YAML配置系统，便于管理和部署。
 
 ## 配置文件
 
-### 基本配置文件
+### 配置文件结构
 
-主配置文件位于 `configs/config.yaml`：
+项目只使用两个配置文件：
+
+- `configs/config.yaml` - 实际配置文件（生产使用）
+- `configs/config.example.yaml` - 配置示例文件（模板）
+
+### 配置示例
+
+`configs/config.example.yaml`：
 
 ```yaml
 app:
   name: "Go Admin"
   env: "development"  # development, production, test
+  mode: "development"
   debug: true
-  base_url: "http://localhost:8080"
+  baseUrl: "http://localhost:8080"
   api_prefix: "/api/v1"
   port: 8080
-  key: "your-app-key"
-  timezone: "Asia/Shanghai"
 
-http:
-  read_timeout: 60
-  write_timeout: 60
-  idle_timeout: 60
-  shutdown_timeout: 30
+server:
+  address: "0.0.0.0:8080"
+  mode: "debug"  # debug, release, test
 
 mysql:
   host: "localhost"
   port: 3306
   username: "root"
-  password: "password"
+  password: ""
   database: "go_admin"
   max_idle_conns: 10
   max_open_conns: 100
-  conn_max_lifetime: 3600
+  conn_max_lifetime: 3600  # seconds
 
 redis:
   host: "localhost"
   port: 6379
   password: ""
   db: 0
-  pool_size: 100
-  min_idle_conns: 10
+
+jwt:
+  secret: "your-secret-key-here"  # Change this in production
+  expire_time: 86400  # 24 hours
 
 log:
   level: "debug"  # debug, info, warn, error
-  format: "json"  # json, text
-  output: "storage/logs/app.log"
-  max_size: 100    # MB
+  filename: "storage/logs/app.log"
+  max_size: 100    # megabytes
   max_backups: 3
   max_age: 28      # days
-  compress: true
 
-jwt:
-  secret: "your-jwt-secret"
-  ttl: 86400       # seconds
-  refresh_ttl: 604800
+cors:
+  allow_origins: ["*"]  # Use specific domains in production
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
+  allow_credentials: true
+  max_age: 86400  # seconds
 
-mail:
-  host: "smtp.mailtrap.io"
-  port: 2525
-  username: "your-username"
-  password: "your-password"
-  from_address: "admin@example.com"
-  from_name: "Go Admin"
+i18n:
+  default_locale: "en"
+  load_path: "./locales"
+  available_locales: ["en", "zh"]
+
+storage:
+  driver: "local"  # local, s3
+  options:
+    local:
+      path: "storage/uploads"
+    s3:
+      region: "us-west-2"
+      bucket: "your-bucket"
+      access_key: ""
+      secret_key: ""
 ```
 
-### 环境配置
+## 配置使用
 
-1. 开发环境：`config/config.development.yaml`
-2. 测试环境：`config/config.testing.yaml`
-3. 生产环境：`config/config.production.yaml`
+### 初始化配置
 
-## 使用配置
+```bash
+# 复制配置示例文件
+cp configs/config.example.yaml configs/config.yaml
+
+# 根据环境修改配置
+vim configs/config.yaml
+```
 
 ### 在代码中访问配置
 
@@ -83,7 +101,7 @@ import "app/internal/config"
 
 func main() {
     // 加载配置
-    cfg, err := config.Load()
+    cfg, err := config.LoadConfig()
     if err != nil {
         log.Fatal(err)
     }
@@ -113,122 +131,120 @@ func NewUserService(cfg *config.Config, db *gorm.DB) *UserService {
 }
 ```
 
-## 环境变量
+## 环境特定配置
 
-配置值可以通过环境变量覆盖。环境变量的优先级高于配置文件：
+针对不同环境，直接修改 `configs/config.yaml` 中的相应字段：
 
-```bash
-# 应用配置
-export APP_NAME=MyAdmin
-export APP_ENV=production
-export APP_DEBUG=false
-export APP_URL=http://admin.example.com
+### 开发环境
 
-# 数据库配置
-export DB_HOST=db.example.com
-export DB_PORT=3306
-export DB_DATABASE=admin
-export DB_USERNAME=root
-export DB_PASSWORD=secret
+```yaml
+app:
+  env: "development"
+  mode: "development"
+  debug: true
 
-# Redis 配置
-export REDIS_HOST=redis.example.com
-export REDIS_PORT=6379
-export REDIS_PASSWORD=secret
-export REDIS_DB=0
+server:
+  mode: "debug"
 
-# JWT 配置
-export JWT_SECRET=your-secret-key
-export JWT_EXPIRE=24
-
-# 日志配置
-export LOG_LEVEL=info
-export LOG_FILENAME=storage/logs/app.log
+log:
+  level: "debug"
 ```
 
-## 配置加载顺序
+### 生产环境
 
-配置系统按以下顺序加载和合并配置：
+```yaml
+app:
+  env: "production"
+  mode: "production"
+  debug: false
+  baseUrl: "https://your-domain.com"
 
-1. 默认配置
-2. 配置文件（configs/config.yaml）
-3. 环境变量
+server:
+  mode: "release"
 
-后加载的配置会覆盖先加载的配置。
+mysql:
+  host: "prod-db-host"
+  username: "prod-user"
+  password: "secure-password"
+  database: "prod_database"
 
-## 配置缓存
+jwt:
+  secret: "production-secret-key"
 
-在生产环境中，配置会被缓存以提高性能：
+log:
+  level: "info"
+  filename: "/var/log/go-admin/app.log"
 
-```bash
-# 生成配置缓存
-go run cmd/tools/main.go config:cache
-
-# 清除配置缓存
-go run cmd/tools/main.go config:clear
-```
-
-## 敏感信息处理
-
-1. 不要在配置文件中存储敏感信息
-2. 使用环境变量存储敏感数据
-3. 使用加密配置存储敏感数据：
-
-```go
-// 加密配置值
-func (c *Config) EncryptValue(key string, value string) error {
-    encrypted, err := crypto.Encrypt(value, c.App.Key)
-    if err != nil {
-        return err
-    }
-    return c.Set(key, encrypted)
-}
-
-// 解密配置值
-func (c *Config) DecryptValue(key string) (string, error) {
-    value := c.Get(key)
-    return crypto.Decrypt(value, c.App.Key)
-}
+cors:
+  allow_origins: ["https://your-domain.com"]
 ```
 
 ## 配置验证
 
-配置加载时会进行验证：
+配置加载时会进行基本验证：
 
 ```go
 func (c *Config) Validate() error {
     if c.App.Name == "" {
-        return errors.New("app name is required")
+        return errors.New("app.name is required")
     }
-    if c.App.Key == "" {
-        return errors.New("app key is required")
-    }
+    
     if c.MySQL.Host == "" {
-        return errors.New("database host is required")
+        return errors.New("mysql.host is required")
     }
-    // ... 其他验证
+    
+    if c.JWT.Secret == "" || c.JWT.Secret == "your-secret-key-here" {
+        return errors.New("jwt.secret must be set to a secure value")
+    }
+    
     return nil
 }
 ```
 
-## 最佳实践
+## 敏感信息处理
 
-1. 配置分组：
-   - 按功能模块组织配置
-   - 使用有意义的配置键名
-   - 保持配置结构清晰
+1. **不要提交包含敏感信息的 config.yaml**
+2. **生产环境配置建议**：
+   - 使用强密码和随机密钥
+   - 限制数据库用户权限
+   - 使用HTTPS
+   - 设置具体的CORS域名
 
-2. 环境管理：
-   - 每个环境使用独立的配置文件
-   - 使用环境变量覆盖敏感配置
-   - 不同环境使用不同的密钥
+3. **密钥生成**：
+```bash
+# 生成JWT密钥
+openssl rand -base64 32
 
-3. 安全性：
-   - 不要提交敏感配置到版本控制
-   - 使用环境变量或加密存储敏感信息
-   - 定期轮换密钥和凭证
+# 生成App密钥
+openssl rand -hex 32
+```
 
-4. 维护性：
-   - 记录配置变更
-   - 保持配置文件的版本控制
-   - 定期审查和清理未使用的配置 
+## 部署最佳实践
+
+1. **配置文件管理**：
+   - 在服务器上直接创建 `config.yaml`
+   - 或通过配置管理工具部署
+   - 确保文件权限安全（600）
+
+2. **不同环境的配置**：
+```bash
+# 开发环境
+configs/config.yaml  # 开发配置
+
+# 测试环境  
+configs/config.yaml  # 测试配置
+
+# 生产环境
+configs/config.yaml  # 生产配置
+```
+
+3. **配置备份**：
+```bash
+# 备份当前配置
+cp configs/config.yaml configs/config.backup.yaml
+
+# 恢复配置
+cp configs/config.backup.yaml configs/config.yaml
+```
+
+这种简化的配置系统让部署和管理变得更加直观和可靠。 

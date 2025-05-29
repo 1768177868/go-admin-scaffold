@@ -1,8 +1,9 @@
 app:
   name: "Go Admin"
   env: "development"  # development, production, test
+  mode: "development"
   debug: true
-  base_url: "http://localhost:8080"
+  baseUrl: "http://localhost:8080"
   api_prefix: "/api/v1"
   port: 8080
 
@@ -28,13 +29,21 @@ redis:
 
 jwt:
   secret: "your-secret-key-here"  # Change this in production
-  expire: 86400  # 24 hours
+  expire_time: 86400  # 24 hours
   issuer: "go-admin"
 
 cache:
-  driver: "redis"  # memory, redis
+  driver: "redis"  # file, redis
   prefix: "goadmin:"
-  ttl: 3600  # seconds
+  options:
+    ttl: 3600  # seconds
+    # File cache options (when driver is "file")
+    file_path: "storage/cache"  # Cache file directory
+    # Redis cache options (when driver is "redis")
+    host: "localhost"
+    port: 6379
+    password: ""
+    db: 0
 
 queue:
   driver: "redis"  # redis, memory
@@ -67,10 +76,11 @@ i18n:
 
 storage:
   driver: "local"  # local, s3
-  local:
-    path: "storage/uploads"
-  s3:
-    region: "us-west-2"
-    bucket: "your-bucket"
-    access_key: ""
-    secret_key: "" 
+  options:
+    local:
+      path: "storage/uploads"
+    s3:
+      region: "us-west-2"
+      bucket: "your-bucket"
+      access_key: ""
+      secret_key: "" 

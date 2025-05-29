@@ -43,17 +43,50 @@ type Store interface {
 
 // Config represents cache configuration
 type Config struct {
-	Driver   string `yaml:"driver"`    // Cache driver (file/redis)
-	Prefix   string `yaml:"prefix"`    // Key prefix
-	FilePath string `yaml:"file_path"` // File cache path
+	Driver  string                 `yaml:"driver"`  // Cache driver (file/redis)
+	Prefix  string                 `yaml:"prefix"`  // Key prefix
+	Options map[string]interface{} `yaml:"options"` // Driver-specific options
+}
 
-	// Redis configuration
-	Redis struct {
-		Host     string `yaml:"host"`
-		Port     int    `yaml:"port"`
-		Password string `yaml:"password"`
-		DB       int    `yaml:"db"`
-	} `yaml:"redis"`
+// GetFilePath returns the file path for file cache
+func (c *Config) GetFilePath() string {
+	if path, ok := c.Options["file_path"].(string); ok {
+		return path
+	}
+	return "storage/cache" // default path
+}
+
+// GetRedisConfig returns Redis configuration from options
+func (c *Config) GetRedisConfig() RedisConfig {
+	config := RedisConfig{
+		Host:     "localhost",
+		Port:     6379,
+		Password: "",
+		DB:       0,
+	}
+
+	if host, ok := c.Options["host"].(string); ok {
+		config.Host = host
+	}
+	if port, ok := c.Options["port"].(int); ok {
+		config.Port = port
+	}
+	if password, ok := c.Options["password"].(string); ok {
+		config.Password = password
+	}
+	if db, ok := c.Options["db"].(int); ok {
+		config.DB = db
+	}
+
+	return config
+}
+
+// RedisConfig represents Redis cache configuration
+type RedisConfig struct {
+	Host     string
+	Port     int
+	Password string
+	DB       int
 }
 
 var (
