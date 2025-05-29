@@ -78,14 +78,14 @@ func TestListUsers(t *testing.T) {
 	// Test case 1: Successful list
 	users := []models.User{
 		{
-			BaseModel: models.BaseModel{ID: 1},
-			Username:  "user1",
-			Email:     "user1@example.com",
+			ID:       1,
+			Username: "user1",
+			Email:    "user1@example.com",
 		},
 		{
-			BaseModel: models.BaseModel{ID: 2},
-			Username:  "user2",
-			Email:     "user2@example.com",
+			ID:       2,
+			Username: "user2",
+			Email:    "user2@example.com",
 		},
 	}
 
@@ -121,18 +121,18 @@ func TestExportUsers(t *testing.T) {
 
 	users := []models.User{
 		{
-			BaseModel: models.BaseModel{ID: 1},
-			Username:  "user1",
-			Email:     "user1@example.com",
-			Status:    1,
-			Roles:     []models.Role{{Name: "admin"}},
+			ID:       1,
+			Username: "user1",
+			Email:    "user1@example.com",
+			Status:   1,
+			Roles:    []models.Role{{Name: "admin"}},
 		},
 		{
-			BaseModel: models.BaseModel{ID: 2},
-			Username:  "user2",
-			Email:     "user2@example.com",
-			Status:    1,
-			Roles:     []models.Role{{Name: "user"}},
+			ID:       2,
+			Username: "user2",
+			Email:    "user2@example.com",
+			Status:   1,
+			Roles:    []models.Role{{Name: "user"}},
 		},
 	}
 
@@ -172,11 +172,11 @@ func TestCreateUser(t *testing.T) {
 	}
 
 	createdUser := &models.User{
-		BaseModel: models.BaseModel{ID: 1},
-		Username:  req.Username,
-		Email:     req.Email,
-		Nickname:  req.Nickname,
-		Status:    req.Status,
+		ID:       1,
+		Username: req.Username,
+		Email:    req.Email,
+		Nickname: req.Nickname,
+		Status:   req.Status,
 	}
 
 	mockSvc.On("Create", mock.Anything, mock.AnythingOfType("*services.CreateUserRequest")).
@@ -209,11 +209,11 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	updatedUser := &models.User{
-		BaseModel: models.BaseModel{ID: 1},
-		Username:  "testuser",
-		Email:     req.Email,
-		Nickname:  req.Nickname,
-		Status:    req.Status,
+		ID:       1,
+		Username: "testuser",
+		Email:    req.Email,
+		Nickname: req.Nickname,
+		Status:   req.Status,
 	}
 
 	mockSvc.On("Update", mock.Anything, uint(1), mock.AnythingOfType("*services.UpdateUserRequest")).

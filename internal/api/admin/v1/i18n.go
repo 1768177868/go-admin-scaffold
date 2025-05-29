@@ -1,40 +1,33 @@
 package v1
 
 import (
-	"net/http"
-
 	"app/pkg/i18n"
+	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
 // GetLocales returns a list of available locales
 func GetLocales(c *gin.Context) {
-	i18nInst := i18n.GetInstance()
-	locales := i18nInst.GetLocales()
-
-	c.JSON(http.StatusOK, gin.H{
-		"locales": locales,
-		"default": i18nInst.GetDefaultLocale(),
+	i18nInstance := i18n.GetInstance()
+	response.Success(c, gin.H{
+		"locales":        i18nInstance.GetLocales(),
+		"default_locale": i18nInstance.GetDefaultLocale(),
 	})
 }
 
 // GetTranslations returns all translations for a specific locale
 func GetTranslations(c *gin.Context) {
-	locale := c.Query("locale")
-	if locale == "" {
-		locale = i18n.GetInstance().GetDefaultLocale()
-	}
+	locale := c.Param("locale")
+	i18nInstance := i18n.GetInstance()
 
-	translations := i18n.GetInstance().GetTranslations(locale)
+	translations := i18nInstance.GetTranslations(locale)
 	if translations == nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Locale not found",
-		})
+		response.NotFoundError(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response.Success(c, gin.H{
 		"locale":       locale,
 		"translations": translations,
 	})

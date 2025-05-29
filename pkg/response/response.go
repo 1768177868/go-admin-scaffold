@@ -25,14 +25,12 @@ type PageData struct {
 	Pages    int         `json:"pages"`     // Total pages
 }
 
+// Response codes
 const (
-	// Success code
-	CodeSuccess = 0
-
-	// Common error codes (10000-10999)
-	CodeServerError     = 10000 // Server error
-	CodeParamError      = 10001 // Parameter error
-	CodeValidationError = 10002 // Validation error
+	CodeSuccess         = 0     // Success
+	CodeParamError      = 10000 // Parameter error
+	CodeValidationError = 10001 // Validation error
+	CodeServerError     = 10002 // Server error
 	CodeNotFound        = 10003 // Not found
 	CodeBusinessError   = 10004 // Business error
 )
@@ -49,7 +47,7 @@ func Error(c *gin.Context, code int, message string) {
 
 // ValidationError sends a validation error response
 func ValidationError(c *gin.Context, message string) {
-	JSON(c, http.StatusOK, CodeValidationError, message, nil)
+	Error(c, CodeValidationError, message)
 }
 
 // NotFoundError sends a not found error response
@@ -63,21 +61,15 @@ func BusinessError(c *gin.Context, message string) {
 }
 
 // PageSuccess sends a successful paginated response
-func PageSuccess(c *gin.Context, list interface{}, total int64, page, pageSize int) {
-	pages := int(total) / pageSize
-	if int(total)%pageSize > 0 {
-		pages++
-	}
-
-	pageData := &PageData{
-		List:     list,
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		Pages:    pages,
-	}
-
-	Success(c, pageData)
+func PageSuccess(c *gin.Context, data interface{}, total int64, page int, pageSize int) {
+	Success(c, gin.H{
+		"items": data,
+		"pagination": gin.H{
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
 }
 
 // JSON sends a JSON response with trace ID
@@ -123,7 +115,22 @@ func ForbiddenError(c *gin.Context) {
 	})
 }
 
-// ParamError returns a parameter error response
+// Unauthorized sends a 401 Unauthorized response
+func Unauthorized(c *gin.Context, message string) {
+	Error(c, CodeUnauthorized, message)
+}
+
+// Forbidden sends a 403 Forbidden response
+func Forbidden(c *gin.Context, message string) {
+	Error(c, CodeForbidden, message)
+}
+
+// NotFound sends a 404 Not Found response
+func NotFound(c *gin.Context, message string) {
+	Error(c, CodeNotFound, message)
+}
+
+// ParamError sends a 400 Bad Request response for parameter errors
 func ParamError(c *gin.Context, message string) {
 	Error(c, CodeParamError, message)
 }

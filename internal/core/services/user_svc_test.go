@@ -138,19 +138,19 @@ func TestUserService_ExportUserList(t *testing.T) {
 
 	testUsers := []models.User{
 		{
-			BaseModel: models.BaseModel{ID: 1},
-			Username:  "user1",
-			Email:     "user1@example.com",
-			Status:    1,
+			ID:       1,
+			Username: "user1",
+			Email:    "user1@example.com",
+			Status:   1,
 			Roles: []models.Role{
 				{Name: "admin"},
 			},
 		},
 		{
-			BaseModel: models.BaseModel{ID: 2},
-			Username:  "user2",
-			Email:     "user2@example.com",
-			Status:    1,
+			ID:       2,
+			Username: "user2",
+			Email:    "user2@example.com",
+			Status:   1,
 			Roles: []models.Role{
 				{Name: "user"},
 			},
@@ -187,11 +187,11 @@ func TestUserService_Update(t *testing.T) {
 	ctx := context.Background()
 	userID := uint(1)
 	existingUser := &models.User{
-		BaseModel: models.BaseModel{ID: userID},
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Nickname:  "Test User",
-		Status:    1,
+		ID:       userID,
+		Username: "testuser",
+		Email:    "test@example.com",
+		Nickname: "Test User",
+		Status:   1,
 	}
 
 	req := &UpdateUserRequest{
@@ -226,8 +226,8 @@ func TestUserService_Delete(t *testing.T) {
 	ctx := context.Background()
 	userID := uint(1)
 	existingUser := &models.User{
-		BaseModel: models.BaseModel{ID: userID},
-		Username:  "testuser",
+		ID:       userID,
+		Username: "testuser",
 	}
 
 	// Test case 1: Successful deletion

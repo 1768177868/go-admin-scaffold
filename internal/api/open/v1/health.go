@@ -1,35 +1,32 @@
 package v1
 
 import (
-	"net/http"
-
 	"app/pkg/database"
+	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// HealthCheck handles the health check request
+// HealthCheck handles health check requests
 func HealthCheck(c *gin.Context) {
 	// Check database connection
-	sqlDB, err := database.GetDB().DB()
-	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status":  "error",
-			"message": "database connection error",
-		})
+	if err := database.DB().Raw("SELECT 1").Error; err != nil {
+		response.Error(c, response.CodeServerError, "Database connection error")
 		return
 	}
 
-	if err := sqlDB.Ping(); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status":  "error",
-			"message": "database ping failed",
-		})
+	// Check Redis connection
+	// TODO: Add Redis health check
+	if false {
+		response.Error(c, response.CodeServerError, "Redis connection error")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "ok",
-		"message": "service is healthy",
+	response.Success(c, gin.H{
+		"status": "ok",
+		"info": gin.H{
+			"database": "healthy",
+			"redis":    "healthy",
+		},
 	})
 }

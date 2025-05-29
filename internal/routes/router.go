@@ -20,7 +20,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 	// Admin API routes (v1)
 	adminV1 := r.Group("/api/admin/v1")
-	adminV1.Use(middleware.JWT(cfg))       // Protect all admin routes with JWT auth
+	adminV1.Use(middleware.JWT())          // Protect all admin routes with JWT auth
 	adminV1.Use(middleware.OperationLog()) // Add operation logging
 	{
 		// Auth routes
@@ -32,7 +32,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 		// User routes
 		users := adminV1.Group("/users")
-		users.Use(middleware.RBAC()) // Add role-based access control
+		users.Use(middleware.RBAC("users.manage")) // Add role-based access control
 		{
 			users.GET("", adminv1.ListUsers)
 			users.POST("", adminv1.CreateUser)
@@ -44,7 +44,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 		// Role routes
 		roles := adminV1.Group("/roles")
-		roles.Use(middleware.RBAC())
+		roles.Use(middleware.RBAC("roles.manage"))
 		{
 			roles.GET("", adminv1.ListRoles)
 			roles.POST("", adminv1.CreateRole)
@@ -61,7 +61,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 		// Log routes
 		logs := adminV1.Group("/logs")
-		logs.Use(middleware.RBAC())
+		logs.Use(middleware.RBAC("logs.view"))
 		{
 			logs.GET("/login", adminv1.ListLoginLogs)
 			logs.GET("/operation", adminv1.ListOperationLogs)

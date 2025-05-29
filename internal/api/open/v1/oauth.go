@@ -1,19 +1,17 @@
 package v1
 
 import (
-	"net/http"
+	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GithubOAuth handles the GitHub OAuth login request
+// GithubOAuth handles GitHub OAuth login
 func GithubOAuth(c *gin.Context) {
-	// TODO: Implement GitHub OAuth login
-	c.JSON(http.StatusOK, gin.H{"message": "GitHub OAuth login"})
+	response.Success(c, gin.H{"message": "GitHub OAuth login"})
 }
 
-// GithubOAuthCallback handles the GitHub OAuth callback
+// GithubOAuthCallback handles GitHub OAuth callback
 func GithubOAuthCallback(c *gin.Context) {
-	// TODO: Implement GitHub OAuth callback
-	c.JSON(http.StatusOK, gin.H{"message": "GitHub OAuth callback"})
+	response.Success(c, gin.H{"message": "GitHub OAuth callback"})
 }

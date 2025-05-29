@@ -2,19 +2,24 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
+// User represents a user in the system
 type User struct {
-	BaseModel
-	Username    string    `gorm:"size:50;not null;unique" json:"username"`
-	Password    string    `gorm:"size:255;not null" json:"-"`
-	Nickname    string    `gorm:"size:50" json:"nickname"`
-	Email       string    `gorm:"size:100;unique" json:"email"`
-	Phone       string    `gorm:"size:20" json:"phone"`
-	Avatar      string    `gorm:"size:255" json:"avatar"`
-	Status      int       `gorm:"default:1" json:"status"` // 1: active, 0: inactive
-	LastLoginAt time.Time `json:"last_login_at"`
-	Roles       []Role    `gorm:"many2many:user_roles;" json:"roles"`
+	ID        uint           `json:"id" gorm:"primarykey"`
+	Username  string         `json:"username" gorm:"uniqueIndex;size:50;not null"`
+	Password  string         `json:"-" gorm:"size:255;not null"`
+	Email     string         `json:"email" gorm:"uniqueIndex;size:100"`
+	Nickname  string         `json:"nickname" gorm:"size:50"`
+	Phone     string         `json:"phone" gorm:"size:20"`
+	Avatar    string         `json:"avatar" gorm:"size:255"`
+	Status    int            `json:"status" gorm:"default:1"`
+	Roles     []Role         `json:"roles" gorm:"many2many:user_roles"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // TableName specifies the table name for User model

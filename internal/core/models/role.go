@@ -1,15 +1,23 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
 
+	"gorm.io/gorm"
+)
+
+// Role represents a user role in the system
 type Role struct {
-	gorm.Model
-	Name        string   `json:"name" gorm:"size:50;not null;unique"`
-	Code        string   `json:"code" gorm:"size:50;not null;unique"`
-	Description string   `json:"description" gorm:"size:200"`
-	Status      int      `json:"status" gorm:"default:1"` // 1: active, 0: inactive
-	PermList    []string `json:"permissions" gorm:"type:json;column:permissions"`
-	Users       []User   `json:"users,omitempty" gorm:"many2many:user_roles;"`
+	ID          uint           `json:"id" gorm:"primarykey"`
+	Name        string         `json:"name" gorm:"size:50;not null"`
+	Code        string         `json:"code" gorm:"uniqueIndex;size:50;not null"`
+	Description string         `json:"description" gorm:"size:200"`
+	Status      int            `json:"status" gorm:"default:1"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	PermList    []string       `json:"permissions" gorm:"type:json;column:permissions"`
+	Users       []User         `json:"users,omitempty" gorm:"many2many:user_roles;"`
 }
 
 // TableName specifies the table name for Role model

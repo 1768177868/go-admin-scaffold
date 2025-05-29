@@ -111,3 +111,45 @@ func (s *LogService) GetUserLoginHistory(ctx context.Context, userID uint, limit
 func (s *LogService) GetUserOperationHistory(ctx context.Context, userID uint, limit int) ([]models.OperationLog, error) {
 	return s.logRepo.GetOperationLogsByUserID(ctx, userID, limit)
 }
+
+// GetLoginLogs retrieves a paginated list of login logs
+func (s *LogService) GetLoginLogs(ctx context.Context, page, pageSize int) ([]models.LoginLog, int64, error) {
+	pagination := &models.Pagination{
+		Page:     page,
+		PageSize: pageSize,
+	}
+	logs, err := s.logRepo.ListLoginLogs(ctx, pagination, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	return logs, pagination.Total, nil
+}
+
+// GetOperationLogs retrieves a paginated list of operation logs
+func (s *LogService) GetOperationLogs(ctx context.Context, page, pageSize int) ([]models.OperationLog, int64, error) {
+	pagination := &models.Pagination{
+		Page:     page,
+		PageSize: pageSize,
+	}
+	logs, err := s.logRepo.ListOperationLogs(ctx, pagination, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	return logs, pagination.Total, nil
+}
+
+// GetUserLoginLogs retrieves login logs for a specific user
+func (s *LogService) GetUserLoginLogs(ctx context.Context, userID uint) ([]models.LoginLog, error) {
+	conditions := map[string]interface{}{
+		"user_id": userID,
+	}
+	return s.logRepo.ListLoginLogs(ctx, &models.Pagination{Page: 1, PageSize: 100}, conditions)
+}
+
+// GetUserOperationLogs retrieves operation logs for a specific user
+func (s *LogService) GetUserOperationLogs(ctx context.Context, userID uint) ([]models.OperationLog, error) {
+	conditions := map[string]interface{}{
+		"user_id": userID,
+	}
+	return s.logRepo.ListOperationLogs(ctx, &models.Pagination{Page: 1, PageSize: 100}, conditions)
+}

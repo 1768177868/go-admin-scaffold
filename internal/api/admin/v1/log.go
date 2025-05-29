@@ -1,108 +1,90 @@
 package v1
 
 import (
-	"net/http"
 	"strconv"
 
-	"app/internal/core/models"
 	"app/internal/core/services"
+	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ListLoginLogs handles the request to get a paginated list of login logs
+// ListLoginLogs returns a list of login logs
 func ListLoginLogs(c *gin.Context) {
+	// Get query parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	pagination := &models.Pagination{
-		Page:     page,
-		PageSize: pageSize,
-	}
-
-	// Parse query parameters
-	query := &services.LogQuery{}
-	if err := c.ShouldBindQuery(query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+	// Get log service
 	logSvc := c.MustGet("logService").(*services.LogService)
-	logs, err := logSvc.ListLoginLogs(c.Request.Context(), pagination, query)
+
+	// Get logs with pagination
+	logs, total, err := logSvc.GetLoginLogs(c.Request.Context(), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch login logs"})
+		response.ValidationError(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": logs,
-		"pagination": gin.H{
-			"page":      pagination.Page,
-			"page_size": pagination.PageSize,
-			"total":     pagination.Total,
-		},
-	})
+	// Return logs
+	if err != nil {
+		response.ServerError(c)
+		return
+	}
+
+	response.PageSuccess(c, logs, total, page, pageSize)
 }
 
-// ListOperationLogs handles the request to get a paginated list of operation logs
+// ListOperationLogs returns a list of operation logs
 func ListOperationLogs(c *gin.Context) {
+	// Get query parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	pagination := &models.Pagination{
-		Page:     page,
-		PageSize: pageSize,
-	}
-
-	// Parse query parameters
-	query := &services.LogQuery{}
-	if err := c.ShouldBindQuery(query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+	// Get log service
 	logSvc := c.MustGet("logService").(*services.LogService)
-	logs, err := logSvc.ListOperationLogs(c.Request.Context(), pagination, query)
+
+	// Get logs with pagination
+	logs, total, err := logSvc.GetOperationLogs(c.Request.Context(), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch operation logs"})
+		response.ValidationError(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": logs,
-		"pagination": gin.H{
-			"page":      pagination.Page,
-			"page_size": pagination.PageSize,
-			"total":     pagination.Total,
-		},
-	})
+	// Return logs
+	if err != nil {
+		response.ServerError(c)
+		return
+	}
+
+	response.PageSuccess(c, logs, total, page, pageSize)
 }
 
-// GetUserLogs handles the request to get a user's login and operation history
+// GetUserLogs returns a user's login and operation logs
 func GetUserLogs(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// Get user ID from path parameter
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		response.ParamError(c, "Invalid user ID")
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-
+	// Get log service
 	logSvc := c.MustGet("logService").(*services.LogService)
 
-	loginLogs, err := logSvc.GetUserLoginHistory(c.Request.Context(), uint(userID), limit)
+	// Get user's logs
+	loginLogs, err := logSvc.GetUserLoginLogs(c.Request.Context(), uint(userID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch login history"})
+		response.ServerError(c)
 		return
 	}
 
-	operationLogs, err := logSvc.GetUserOperationHistory(c.Request.Context(), uint(userID), limit)
+	operationLogs, err := logSvc.GetUserOperationLogs(c.Request.Context(), uint(userID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch operation history"})
+		response.ServerError(c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response.Success(c, gin.H{
 		"login_logs":     loginLogs,
 		"operation_logs": operationLogs,
 	})
