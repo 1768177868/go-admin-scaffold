@@ -1,0 +1,49 @@
+common:
+  welcome: "Welcome to Go Admin"
+  language: "English"
+  save: "Save"
+  cancel: "Cancel"
+  delete: "Delete"
+  edit: "Edit"
+  create: "Create"
+  search: "Search"
+  actions: "Actions"
+  confirm: "Confirm"
+  success: "Success"
+  error: "Error"
+
+auth:
+  login: "Login"
+  logout: "Logout"
+  register: "Register"
+  forgot_password: "Forgot Password"
+  reset_password: "Reset Password"
+  invalid_credentials: "Invalid username or password"
+  login_success: "Login successful"
+  logout_success: "Logout successful"
+
+user:
+  username: "Username"
+  password: "Password"
+  email: "Email"
+  phone: "Phone"
+  role: "Role"
+  status: "Status"
+  created_at: "Created At"
+  updated_at: "Updated At"
+  last_login: "Last Login"
+
+validation:
+  required: "%s is required"
+  min_length: "%s must be at least %d characters"
+  max_length: "%s cannot exceed %d characters"
+  invalid_email: "Invalid email address"
+  invalid_phone: "Invalid phone number"
+  password_mismatch: "Passwords do not match"
+
+errors:
+  internal_error: "Internal server error"
+  not_found: "Resource not found"
+  unauthorized: "Unauthorized access"
+  forbidden: "Access forbidden"
+  invalid_request: "Invalid request" 

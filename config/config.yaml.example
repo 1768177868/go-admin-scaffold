@@ -1,0 +1,56 @@
+app:
+  name: "Go Admin Base"
+  env: "local"
+  debug: true
+  url: "http://localhost:8080"
+  timezone: "Asia/Shanghai"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 60
+  write_timeout: 60
+
+log:
+  level: "debug"
+  filename: "storage/logs/app.log"
+  max_size: 100
+  max_backups: 10
+  max_age: 30
+  compress: true
+  daily: true
+
+cache:
+  driver: "file"  # file or redis
+  prefix: "cache:"
+  file_path: "storage/cache"
+  redis:
+    host: "127.0.0.1"
+    port: 6379
+    password: ""
+    db: 0
+
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: 3306
+  database: "go_admin"
+  username: "root"
+  password: "root"
+  charset: "utf8mb4"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+
+jwt:
+  secret: "your-secret-key"
+  expire: 86400
+  issuer: "go-admin"
+
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+  allow_headers: ["Origin", "Content-Length", "Content-Type", "Authorization"]
+  expose_headers: ["Content-Length"]
+  allow_credentials: true
+  max_age: 12h 
