@@ -1,18 +1,26 @@
 app:
-  name: "go-admin"
-  mode: "development"
+  name: "Go Admin"
+  env: "development"  # development, production, test
+  debug: true
+  base_url: "http://localhost:8080"
+  api_prefix: "/api/v1"
   port: 8080
+
+server:
+  address: "0.0.0.0"
+  port: 8080
+  mode: "debug"  # debug, release, test
 
 database:
   driver: "mysql"
   host: "localhost"
   port: 3306
   username: "root"
-  password: "password"
+  password: "your-password"
   database: "go_admin"
   max_idle_conns: 10
   max_open_conns: 100
-  conn_max_lifetime: 3600
+  conn_max_lifetime: 3600  # seconds
 
 redis:
   host: "localhost"
@@ -21,27 +29,50 @@ redis:
   db: 0
 
 jwt:
-  secret: "your-secret-key"
+  secret: "your-secret-key-here"  # Change this in production
   expire: 86400  # 24 hours
   issuer: "go-admin"
 
-cors:
-  allow_origins: ["*"]
-  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
-  allow_credentials: true
-  max_age: 86400
+cache:
+  driver: "redis"  # memory, redis
+  prefix: "goadmin:"
+  ttl: 3600  # seconds
+
+queue:
+  driver: "redis"  # redis, memory
+  options:
+    host: "localhost"
+    port: 6379
+    password: ""
+    db: 1
 
 log:
-  level: "debug"
-  filename: "logs/app.log"
+  level: "debug"  # debug, info, warn, error
+  filename: "storage/logs/app.log"
   max_size: 100    # megabytes
   max_backups: 3
   max_age: 28      # days
   compress: true
 
-s3:
-  region: "us-west-2"
-  bucket: "your-bucket"
-  access_key: ""
-  secret_key: "" 
+cors:
+  allow_origins: ["*"]  # Use specific domains in production
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
+  expose_headers: ["Content-Length"]
+  allow_credentials: true
+  max_age: 86400  # seconds
+
+i18n:
+  default_locale: "en"
+  load_path: "./locales"
+  available_locales: ["en", "zh"]
+
+storage:
+  driver: "local"  # local, s3
+  local:
+    path: "storage/uploads"
+  s3:
+    region: "us-west-2"
+    bucket: "your-bucket"
+    access_key: ""
+    secret_key: "" 

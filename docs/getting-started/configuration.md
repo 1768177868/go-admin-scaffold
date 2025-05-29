@@ -6,16 +6,17 @@
 
 ### 基本配置文件
 
-主配置文件位于 `config/config.yaml`：
+主配置文件位于 `configs/config.yaml`：
 
 ```yaml
 app:
   name: "Go Admin"
-  env: "development"  # development, testing, production
+  env: "development"  # development, production, test
   debug: true
+  base_url: "http://localhost:8080"
+  api_prefix: "/api/v1"
   port: 8080
   key: "your-app-key"
-  url: "http://localhost:8080"
   timezone: "Asia/Shanghai"
 
 http:
@@ -118,32 +119,40 @@ func NewUserService(cfg *config.Config, db *gorm.DB) *UserService {
 
 ```bash
 # 应用配置
-export APP_NAME="My App"
-export APP_ENV="production"
-export APP_DEBUG="false"
-export APP_PORT="8080"
+export APP_NAME=MyAdmin
+export APP_ENV=production
+export APP_DEBUG=false
+export APP_URL=http://admin.example.com
 
 # 数据库配置
-export DB_HOST="db.example.com"
-export DB_PORT="3306"
-export DB_USERNAME="prod_user"
-export DB_PASSWORD="secret"
-export DB_DATABASE="myapp"
+export DB_HOST=db.example.com
+export DB_PORT=3306
+export DB_DATABASE=admin
+export DB_USERNAME=root
+export DB_PASSWORD=secret
 
-# Redis配置
-export REDIS_HOST="redis.example.com"
-export REDIS_PORT="6379"
-export REDIS_PASSWORD="secret"
+# Redis 配置
+export REDIS_HOST=redis.example.com
+export REDIS_PORT=6379
+export REDIS_PASSWORD=secret
+export REDIS_DB=0
+
+# JWT 配置
+export JWT_SECRET=your-secret-key
+export JWT_EXPIRE=24
+
+# 日志配置
+export LOG_LEVEL=info
+export LOG_FILENAME=storage/logs/app.log
 ```
 
 ## 配置加载顺序
 
 配置系统按以下顺序加载和合并配置：
 
-1. 默认配置（硬编码）
-2. 基本配置文件（config.yaml）
-3. 环境特定配置文件（config.{env}.yaml）
-4. 环境变量
+1. 默认配置
+2. 配置文件（configs/config.yaml）
+3. 环境变量
 
 后加载的配置会覆盖先加载的配置。
 

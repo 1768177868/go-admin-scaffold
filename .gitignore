@@ -44,8 +44,8 @@ bin/
 dist/
 
 # Config files
-config/config.yaml
-!config/config.yaml.example
+/configs/config.yaml
+!/configs/config.example.yaml
 
 # Temporary files
 tmp/

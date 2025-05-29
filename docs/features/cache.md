@@ -1,28 +1,24 @@
 # 缓存系统
 
-本框架提供了灵活的缓存系统，支持多种缓存驱动，包括 Redis、内存缓存和文件缓存。
+## 概述
+
+系统支持多种缓存驱动，包括 Redis 和内存缓存。
 
 ## 配置
 
-在 `config/config.yaml` 中配置缓存：
+在 `configs/config.yaml` 中配置缓存：
 
 ```yaml
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
 cache:
-  driver: "redis"  # redis, memory, file
-  prefix: "cache:"
-  ttl: 3600       # 默认过期时间（秒）
-
-  redis:
-    host: "localhost"
-    port: 6379
-    password: ""
-    db: 0
-    pool_size: 100
-    min_idle_conns: 10
-
-  file:
-    path: "storage/cache"
-    extension: ".cache"
+  driver: "redis"  # memory, redis
+  prefix: "goadmin:"
+  ttl: 3600  # seconds
 ```
 
 ## 基本使用

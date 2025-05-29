@@ -1,10 +1,8 @@
 # 任务调度
 
-任务调度系统允许你在特定时间执行预定的任务。本框架提供了灵活的任务调度机制，支持分布式环境下的任务协调。
+## 概述
 
-## 配置
-
-任务调度系统依赖 Redis 进行分布式锁管理。确保在 `config/config.yaml` 中正确配置 Redis：
+任务调度系统依赖 Redis 进行分布式锁管理。确保在 `configs/config.yaml` 中正确配置 Redis：
 
 ```yaml
 redis:
@@ -12,6 +10,14 @@ redis:
   port: 6379
   password: ""
   db: 0
+
+queue:
+  driver: "redis"  # redis, memory
+  options:
+    host: "localhost"
+    port: 6379
+    password: ""
+    db: 1
 ```
 
 ## 创建任务

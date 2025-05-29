@@ -91,22 +91,24 @@ type CORSConfig struct {
 }
 
 // Load loads configuration from environment variables and config files
-func Load() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	config := &Config{}
 
 	// Set default configuration file paths
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
-	viper.AddConfigPath("/etc/app/")
+
+	// 配置文件搜索路径
+	viper.AddConfigPath("./configs") // 首选路径
+	viper.AddConfigPath(".")         // 当前目录
+	viper.AddConfigPath("/etc/app/") // 系统配置目录
 
 	// Load configuration file
 	if err := viper.ReadInConfig(); err != nil {
-		// Only log the error if it's not a "config file not found" error
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("error reading config file: %w", err)
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			return nil, fmt.Errorf("config file not found: %v", err)
 		}
+		return nil, fmt.Errorf("error reading config file: %v", err)
 	}
 
 	// Environment variables take precedence over config file

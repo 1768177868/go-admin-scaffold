@@ -45,8 +45,11 @@ go mod download
 
 3. Configure your environment:
 ```bash
+# Copy configuration file
 cp configs/config.example.yaml configs/config.yaml
-# Edit configs/config.yaml with your settings
+
+# Edit configuration file
+vim configs/config.yaml
 ```
 
 4. Run the application:
