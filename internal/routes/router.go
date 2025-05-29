@@ -32,25 +32,34 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 		// User routes
 		users := adminV1.Group("/users")
-		users.Use(middleware.RBAC("users.manage")) // Add role-based access control
 		{
-			users.GET("", adminv1.ListUsers)
-			users.POST("", adminv1.CreateUser)
-			users.GET("/:id", adminv1.GetUser)
-			users.PUT("/:id", adminv1.UpdateUser)
-			users.DELETE("/:id", adminv1.DeleteUser)
-			users.GET("/:id/logs", adminv1.GetUserLogs) // Add user logs endpoint
+			users.GET("", middleware.RBAC("user:view"), adminv1.ListUsers)
+			users.POST("", middleware.RBAC("user:create"), adminv1.CreateUser)
+			users.GET("/:id", middleware.RBAC("user:view"), adminv1.GetUser)
+			users.PUT("/:id", middleware.RBAC("user:edit"), adminv1.UpdateUser)
+			users.DELETE("/:id", middleware.RBAC("user:delete"), adminv1.DeleteUser)
+			users.GET("/:id/logs", middleware.RBAC("log:view"), adminv1.GetUserLogs)
 		}
 
 		// Role routes
 		roles := adminV1.Group("/roles")
-		roles.Use(middleware.RBAC("roles.manage"))
 		{
-			roles.GET("", adminv1.ListRoles)
-			roles.POST("", adminv1.CreateRole)
-			roles.GET("/:id", adminv1.GetRole)
-			roles.PUT("/:id", adminv1.UpdateRole)
-			roles.DELETE("/:id", adminv1.DeleteRole)
+			roles.GET("", middleware.RBAC("role:view"), adminv1.ListRoles)
+			roles.POST("", middleware.RBAC("role:create"), adminv1.CreateRole)
+			roles.GET("/:id", middleware.RBAC("role:view"), adminv1.GetRole)
+			roles.PUT("/:id", middleware.RBAC("role:edit"), adminv1.UpdateRole)
+			roles.DELETE("/:id", middleware.RBAC("role:delete"), adminv1.DeleteRole)
+		}
+
+		// Permission routes
+		permissions := adminV1.Group("/permissions")
+		{
+			permissions.GET("", middleware.RBAC("permission:view"), adminv1.ListPermissions)
+			permissions.POST("", middleware.RBAC("permission:create"), adminv1.CreatePermission)
+			permissions.GET("/:id", middleware.RBAC("permission:view"), adminv1.GetPermission)
+			permissions.PUT("/:id", middleware.RBAC("permission:edit"), adminv1.UpdatePermission)
+			permissions.DELETE("/:id", middleware.RBAC("permission:delete"), adminv1.DeletePermission)
+			permissions.GET("/modules", middleware.RBAC("permission:view"), adminv1.GetPermissionsByModule)
 		}
 
 		// WebSocket routes
@@ -61,7 +70,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 
 		// Log routes
 		logs := adminV1.Group("/logs")
-		logs.Use(middleware.RBAC("logs.view"))
+		logs.Use(middleware.RBAC("log:view"))
 		{
 			logs.GET("/login", adminv1.ListLoginLogs)
 			logs.GET("/operation", adminv1.ListOperationLogs)
@@ -72,6 +81,20 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		{
 			i18n.GET("/locales", adminv1.GetLocales)
 			i18n.GET("/translations", adminv1.GetTranslations)
+		}
+
+		// Dashboard routes (accessible to all authenticated users)
+		dashboard := adminV1.Group("/dashboard")
+		dashboard.Use(middleware.RBAC("dashboard:view"))
+		{
+			// Add dashboard endpoints here when needed
+		}
+
+		// Profile routes (accessible to all authenticated users)
+		profile := adminV1.Group("/profile")
+		{
+			profile.GET("", middleware.RBAC("profile:view"), adminv1.GetCurrentUser)
+			profile.PUT("", middleware.RBAC("profile:edit"), adminv1.UpdateCurrentUser)
 		}
 	}
 

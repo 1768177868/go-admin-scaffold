@@ -7,6 +7,7 @@ import (
 	"app/internal/bootstrap"
 	"app/internal/config"
 	"app/internal/database/migrations"
+	"app/internal/database/seeder"
 	"app/internal/database/seeders"
 	"app/pkg/database"
 )
@@ -36,7 +37,11 @@ func main() {
 
 	// Run seeding if flag is set
 	if *seedFlag {
-		if err := seeders.Seed(); err != nil {
+		db := database.GetDB()
+		seederManager := seeder.NewSeederManager(db)
+		seeders.SetGlobalManager(seederManager)
+
+		if err := seederManager.Run(); err != nil {
 			log.Fatalf("Failed to run seeding: %v", err)
 		}
 		log.Println("Seeding completed successfully")

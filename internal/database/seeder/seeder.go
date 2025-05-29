@@ -153,17 +153,25 @@ func (m *SeederManager) Reset() error {
 		}
 
 		// Define table clearing order (reverse of dependency order)
-		clearOrder := []string{"user_roles", "users", "roles"}
+		clearOrder := []string{"role_permissions", "user_roles", "users", "permissions", "roles"}
 
 		for _, seederName := range clearOrder {
 			if executedMap[seederName] {
 				switch seederName {
+				case "role_permissions":
+					if err := tx.Exec("DELETE FROM role_permissions").Error; err != nil {
+						return err
+					}
 				case "user_roles":
 					if err := tx.Exec("DELETE FROM user_roles").Error; err != nil {
 						return err
 					}
 				case "users":
 					if err := tx.Exec("DELETE FROM users").Error; err != nil {
+						return err
+					}
+				case "permissions":
+					if err := tx.Exec("DELETE FROM permissions").Error; err != nil {
 						return err
 					}
 				case "roles":

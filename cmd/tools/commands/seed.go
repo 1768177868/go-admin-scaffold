@@ -47,7 +47,7 @@ func (c *SeedCommand) Handle(ctx context.Context) error {
 
 	db := database.GetDB()
 	seederManager := seeder.NewSeederManager(db)
-	seeders.InitSeeders(seederManager)
+	seeders.SetGlobalManager(seederManager)
 
 	action := args[1]
 	switch action {

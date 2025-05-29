@@ -4,21 +4,27 @@ import (
 	"app/internal/database/seeder"
 )
 
-var seeders = make(map[string]*seeder.Seeder)
+var globalManager *seeder.SeederManager
+var pendingRegistrations = make(map[string]*seeder.Seeder)
 
-// Register registers a seeder
+// Register registers a seeder with the global manager or stores it temporarily
 func Register(name string, s *seeder.Seeder) {
-	seeders[name] = s
+	if globalManager != nil {
+		globalManager.Register(name, s)
+	} else {
+		pendingRegistrations[name] = s
+	}
 }
 
-// GetSeeders returns all registered seeders
-func GetSeeders() map[string]*seeder.Seeder {
-	return seeders
-}
+// SetGlobalManager sets the global seeder manager and registers all pending seeders
+func SetGlobalManager(manager *seeder.SeederManager) {
+	globalManager = manager
 
-// InitSeeders initializes all seeders
-func InitSeeders(manager *seeder.SeederManager) {
-	for name, s := range seeders {
+	// Register all pending seeders
+	for name, s := range pendingRegistrations {
 		manager.Register(name, s)
 	}
+
+	// Clear pending registrations
+	pendingRegistrations = make(map[string]*seeder.Seeder)
 }
