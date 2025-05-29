@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"app/cmd/server/setup"
 	"app/internal/commands"
 	"app/internal/config"
 	"app/internal/schedule"
@@ -73,9 +76,23 @@ func main() {
 		}
 	}()
 
+	// Initialize the HTTP server
+	app, err := setup.InitializeApp()
+	if err != nil {
+		log.Fatalf("Failed to initialize app: %v", err)
+	}
+
 	// Start HTTP server in a goroutine
+	srv := &http.Server{
+		Addr:    cfg.Server.Address,
+		Handler: app.Engine(),
+	}
+
 	go func() {
-		// Your HTTP server setup and start code here
+		log.Printf("Server is running on %s", cfg.Server.Address)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
 	}()
 
 	// Wait for interrupt signal
@@ -84,6 +101,18 @@ func main() {
 	<-quit
 
 	// Shutdown gracefully
+	log.Println("Shutting down server...")
+
+	// Create a deadline for graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	// Shutdown HTTP server
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	// Stop scheduler
 	log.Println("Shutting down scheduler...")
 	kernel.Stop()
 
@@ -92,5 +121,5 @@ func main() {
 		log.Printf("Error closing Redis client: %v", err)
 	}
 
-	log.Println("Server exiting")
+	log.Println("Server exited")
 }

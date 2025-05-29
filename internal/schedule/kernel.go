@@ -19,9 +19,8 @@ func NewKernel(scheduler *Scheduler) *Kernel {
 
 // Schedule defines scheduled tasks
 func (k *Kernel) Schedule() {
-	// Add your scheduled tasks here
-	// Example:
-	// k.scheduler.Command("cache:clear").EveryThirtyMinutes().Register()
+	// Add a test task that runs every minute
+	k.scheduler.Command("hello:world").EveryMinute().Register()
 
 	log.Println("Scheduled tasks initialized")
 }

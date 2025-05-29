@@ -142,6 +142,14 @@ func LoadConfig() (*Config, error) {
 	config.Log.MaxBackups = getEnvIntOrDefault("LOG_MAX_BACKUPS", viper.GetInt("log.maxBackups"))
 	config.Log.MaxAge = getEnvIntOrDefault("LOG_MAX_AGE", viper.GetInt("log.maxAge"))
 
+	// CORS
+	config.CORS.AllowOrigins = viper.GetStringSlice("cors.allow_origins")
+	config.CORS.AllowMethods = viper.GetStringSlice("cors.allow_methods")
+	config.CORS.AllowHeaders = viper.GetStringSlice("cors.allow_headers")
+	config.CORS.ExposeHeaders = viper.GetStringSlice("cors.expose_headers")
+	config.CORS.AllowCredentials = viper.GetBool("cors.allow_credentials")
+	config.CORS.MaxAge = viper.GetDuration("cors.max_age")
+
 	return config, nil
 }
 

@@ -16,6 +16,11 @@ type App struct {
 	config *config.Config
 }
 
+// Engine returns the Gin engine
+func (a *App) Engine() *gin.Engine {
+	return a.engine
+}
+
 func InitializeApp() (*App, error) {
 	// Load configuration
 	cfg, err := config.LoadConfig()
