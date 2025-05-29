@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -116,15 +117,28 @@ func (m *Manager) handleGroupMessage(message *Message) {
 	if group, ok := m.Groups[message.To]; ok {
 		data, err := json.Marshal(message)
 		if err != nil {
+			log.Printf("Error marshaling group message: %v", err)
 			return
 		}
+
+		log.Printf("Broadcasting group message to group %s with %d members", message.To, len(group))
 
 		// Send to all members of the group, including the sender
 		for userID := range group {
 			if client, ok := m.Clients[userID]; ok {
-				client.Send <- data
+				log.Printf("Sending message to group member: %s", userID)
+				select {
+				case client.Send <- data:
+					log.Printf("Message sent to member %s successfully", userID)
+				default:
+					log.Printf("Failed to send message to member %s: send channel full", userID)
+				}
+			} else {
+				log.Printf("Member %s not found in clients map", userID)
 			}
 		}
+	} else {
+		log.Printf("Group %s not found", message.To)
 	}
 }
 
@@ -151,6 +165,34 @@ func (m *Manager) JoinGroup(groupID, clientID string) {
 		m.Groups[groupID] = make(map[string]bool)
 	}
 	m.Groups[groupID][clientID] = true
+
+	log.Printf("Client %s joined group %s", clientID, groupID)
+
+	// Send a confirmation message to the group
+	confirmMsg := &Message{
+		Type:      MessageTypeAnnouncement,
+		From:      clientID,
+		Content:   fmt.Sprintf("用户 %s 加入了群组", clientID),
+		Timestamp: time.Now().Unix(),
+	}
+
+	data, err := json.Marshal(confirmMsg)
+	if err != nil {
+		log.Printf("Error marshaling join confirmation: %v", err)
+		return
+	}
+
+	// Send to all members of the group
+	for memberID := range m.Groups[groupID] {
+		if client, ok := m.Clients[memberID]; ok {
+			select {
+			case client.Send <- data:
+				log.Printf("Join confirmation sent to %s", memberID)
+			default:
+				log.Printf("Failed to send join confirmation to %s", memberID)
+			}
+		}
+	}
 }
 
 // LeaveGroup removes a client from a group
@@ -168,7 +210,9 @@ func (m *Manager) LeaveGroup(groupID, clientID string) {
 
 // WritePump handles writing messages to the WebSocket connection
 func (c *Client) WritePump() {
+	ticker := time.NewTicker(time.Second * 30)
 	defer func() {
+		ticker.Stop()
 		c.Conn.Close()
 	}()
 
@@ -176,17 +220,33 @@ func (c *Client) WritePump() {
 		select {
 		case message, ok := <-c.Send:
 			if !ok {
+				log.Printf("Send channel closed for client %s", c.ID)
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				log.Printf("Error getting writer for client %s: %v", c.ID, err)
 				return
 			}
-			w.Write(message)
+
+			if _, err := w.Write(message); err != nil {
+				log.Printf("Error writing message for client %s: %v", c.ID, err)
+				return
+			}
 
 			if err := w.Close(); err != nil {
+				log.Printf("Error closing writer for client %s: %v", c.ID, err)
+				return
+			}
+
+			log.Printf("Message successfully written to client %s", c.ID)
+
+		case <-ticker.C:
+			// Send ping to keep connection alive
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("Error sending ping to client %s: %v", c.ID, err)
 				return
 			}
 		}
@@ -196,23 +256,30 @@ func (c *Client) WritePump() {
 // ReadPump handles reading messages from the WebSocket connection
 func (c *Client) ReadPump() {
 	defer func() {
+		log.Printf("Client %s disconnected", c.ID)
 		c.Manager.Unregister <- c
 		c.Conn.Close()
 	}()
 
 	c.Conn.SetReadLimit(512)
+	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetPongHandler(func(string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				// Log error here
+				log.Printf("Error reading message from client %s: %v", c.ID, err)
 			}
 			break
 		}
 
 		var msg Message
 		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Printf("Error unmarshaling message from client %s: %v", c.ID, err)
 			continue
 		}
 
@@ -226,14 +293,16 @@ func (c *Client) ReadPump() {
 
 		// Add debug logging
 		data, _ := json.Marshal(msg)
-		fmt.Printf("Received message: %s\n", string(data))
+		log.Printf("Received message from client %s: %s", c.ID, string(data))
 
 		// Validate message type
 		if msg.Type < MessageTypePrivate || msg.Type > MessageTypeAnnouncement {
-			continue // Skip invalid message types
+			log.Printf("Invalid message type from client %s: %d", c.ID, msg.Type)
+			continue
 		}
 
 		// Broadcast the message
 		c.Manager.Broadcast <- &msg
+		log.Printf("Message from client %s broadcasted", c.ID)
 	}
 }

@@ -269,7 +269,7 @@
             
             ws.onopen = () => {
                 console.log('✅ WebSocket connected successfully!');
-                displaySystemMessage('✅ Connected to WebSocket server');
+                displaySystemMessage('✅ Connected to WebSocket server', userId);
             };
 
             ws.onmessage = (event) => {
@@ -279,18 +279,18 @@
                     displayMessage(message);
                 } catch (error) {
                     console.error('Failed to parse message:', error);
-                    displaySystemMessage('Error: Invalid message format');
+                    displaySystemMessage('Error: Invalid message format', userId);
                 }
             };
 
             ws.onclose = (event) => {
                 console.log('❌ WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
-                displaySystemMessage('❌ Disconnected from WebSocket server');
+                displaySystemMessage('❌ Disconnected from WebSocket server', userId);
             };
 
             ws.onerror = (error) => {
                 console.error('💥 WebSocket error:', error);
-                displaySystemMessage('💥 WebSocket connection error');
+                displaySystemMessage('💥 WebSocket connection error', userId);
             };
         }
 
@@ -332,7 +332,7 @@
                 if (data.code === 0) {
                     groups.add(groupId);
                     updateGroupList();
-                    displaySystemMessage(`成功加入群组：${groupId}`);
+                    displaySystemMessage(`成功加入群组：${groupId}`, userId);
                     document.getElementById('groupId').value = '';
                 } else {
                     alert(data.message || '加入群组失败');
@@ -340,7 +340,7 @@
             })
             .catch(error => {
                 console.error('加入群组出错：', error);
-                displaySystemMessage(`加入群组失败：${error.message}`);
+                displaySystemMessage(`加入群组失败：${error.message}`, userId);
             });
         }
 
@@ -369,17 +369,20 @@
                 from: userId,
                 to: to,
                 content: content,
-                timestamp: Date.now() / 1000
+                timestamp: Math.floor(Date.now() / 1000)
             };
 
+            console.log('Sending message:', message);
             ws.send(JSON.stringify(message));
+
+            // 清空输入框
             document.getElementById('messageContent').value = '';
         }
 
-        function displaySystemMessage(content) {
+        function displaySystemMessage(content, sender) {
             displayMessage({
                 type: 3,
-                from: 'System',
+                from: sender || 'System',
                 to: '',
                 content: content,
                 timestamp: Math.floor(Date.now() / 1000)
@@ -392,7 +395,28 @@
                 return;
             }
 
+            // 检查是否是重复消息（通过比较内容和时间戳）
             const messagesDiv = document.getElementById('messages');
+            const lastMessage = messagesDiv.lastElementChild;
+            if (lastMessage) {
+                const lastTime = lastMessage.querySelector('.timestamp').textContent;
+                const lastContent = lastMessage.querySelector('.message-text').textContent;
+                const lastFrom = lastMessage.querySelector('.message-header').textContent.split(']')[1].split('在群组')[0].trim();
+                
+                const currentTime = new Date(message.timestamp * 1000).toLocaleTimeString();
+                const currentFrom = message.from === userId ? '我' : message.from;
+                
+                // 如果最后一条消息的时间、发送者和内容都相同，则可能是重复消息
+                if (lastTime === `[${currentTime}]` && 
+                    lastContent === message.content && 
+                    lastFrom === currentFrom) {
+                    console.log('Duplicate message detected, skipping display');
+                    return;
+                }
+            }
+
+            console.log('Displaying message:', message);
+
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${getMessageClass(message.type)}`;
             
@@ -401,8 +425,21 @@
             const time = new Date(timestamp * 1000).toLocaleTimeString();
             
             // 处理发送者和接收者
-            const from = message.from ? (message.from === userId ? '我' : message.from) : 'System';
-            const to = message.to ? ` 发送给 ${message.to}` : '';
+            const from = message.from === userId ? '我' : message.from;
+            let to = '';
+            if (message.to) {
+                if (message.type === 1) {
+                    // 私聊消息
+                    if (message.from === userId) {
+                        to = ` 发送给 ${message.to}`;  // 我发送给别人
+                    } else {
+                        to = ` 发送给我`;  // 别人发送给我
+                    }
+                } else if (message.type === 2) {
+                    // 群聊消息
+                    to = ` 在群组 ${message.to} 中`;
+                }
+            }
             
             const messageContent = document.createElement('div');
             messageContent.className = 'message-content';
