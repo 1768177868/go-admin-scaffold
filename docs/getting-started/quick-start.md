@@ -65,9 +65,14 @@ jwt:
 # 创建数据库
 mysql -u root -p -e "CREATE DATABASE go_admin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 运行数据库迁移
-go run cmd/migrate/main.go
+# 运行数据库迁移和初始化数据
+go run cmd/migrate/main.go -seed
 ```
+
+初始化后会创建默认管理员账户：
+- 用户名：admin
+- 密码：admin123
+- 角色：管理员（具有所有权限）
 
 5. 启动服务：
 
