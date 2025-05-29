@@ -27,17 +27,21 @@ func init() {
 			}
 
 			// Add indexes
-			return tx.Exec(`
-				CREATE INDEX idx_roles_code ON roles(code);
-				CREATE INDEX idx_roles_status ON roles(status);
-			`).Error
+			if err := tx.Exec("CREATE INDEX idx_roles_code ON roles(code)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_roles_status ON roles(status)").Error; err != nil {
+				return err
+			}
+
+			return nil
 		},
 		Down: func(tx *gorm.DB) error {
 			// Drop indexes first
-			if err := tx.Exec(`
-				DROP INDEX IF EXISTS idx_roles_code ON roles;
-				DROP INDEX IF EXISTS idx_roles_status ON roles;
-			`).Error; err != nil {
+			if err := tx.Exec("DROP INDEX IF EXISTS idx_roles_code ON roles").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("DROP INDEX IF EXISTS idx_roles_status ON roles").Error; err != nil {
 				return err
 			}
 

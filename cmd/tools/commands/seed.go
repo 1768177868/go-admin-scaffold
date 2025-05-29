@@ -1,29 +1,47 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"app/internal/database/seeder"
 	"app/internal/database/seeders"
+	"app/pkg/console"
 	"app/pkg/database"
 )
 
 type SeedCommand struct {
-	Name        string
-	Description string
-	Args        []string
+	*console.BaseCommand
 }
 
 func NewSeedCommand() *SeedCommand {
-	return &SeedCommand{
-		Name:        "seed",
-		Description: "Database seeding commands",
-		Args:        []string{"action", "seeder?"},
+	cmd := &SeedCommand{
+		BaseCommand: console.NewCommand("seed", "Database seeding commands"),
+	}
+	return cmd
+}
+
+func (c *SeedCommand) Configure(config *console.CommandConfig) {
+	config.Name = "seed"
+	config.Description = "Database seeding commands"
+	config.Usage = "seed [action] [seeder?]"
+	config.Arguments = []console.Argument{
+		{
+			Name:        "action",
+			Description: "Action to perform (run, reset, or status)",
+			Required:    true,
+		},
+		{
+			Name:        "seeder",
+			Description: "Optional seeder name(s) to run",
+			Required:    false,
+		},
 	}
 }
 
-func (c *SeedCommand) Run(args []string) error {
-	if len(args) == 0 {
+func (c *SeedCommand) Handle(ctx context.Context) error {
+	args := ctx.Value("args").([]string)
+	if len(args) < 2 {
 		return fmt.Errorf("action required: run, reset, or status")
 	}
 
@@ -31,12 +49,12 @@ func (c *SeedCommand) Run(args []string) error {
 	seederManager := seeder.NewSeederManager(db)
 	seeders.InitSeeders(seederManager)
 
-	action := args[0]
+	action := args[1]
 	switch action {
 	case "run":
 		// If specific seeders are provided, run only those
-		if len(args) > 1 {
-			return seederManager.Run(args[1:]...)
+		if len(args) > 2 {
+			return seederManager.Run(args[2:]...)
 		}
 		// Otherwise run all seeders
 		return seederManager.Run()

@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
+	"app/cmd/tools/commands"
 	"app/internal/bootstrap"
-	"app/internal/commands"
 	"app/internal/config"
 	"app/pkg/console"
 )

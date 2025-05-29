@@ -18,24 +18,38 @@ func init() {
 				return err
 			}
 
-			// Add indexes and foreign keys
-			return tx.Exec(`
-				CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
-				CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
-				ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_user_id 
-					FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-				ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_role_id 
-					FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE;
-			`).Error
+			// Add indexes
+			if err := tx.Exec("CREATE INDEX idx_user_roles_user_id ON user_roles(user_id)").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("CREATE INDEX idx_user_roles_role_id ON user_roles(role_id)").Error; err != nil {
+				return err
+			}
+
+			// Add foreign key constraints
+			if err := tx.Exec("ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_role_id FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE").Error; err != nil {
+				return err
+			}
+
+			return nil
 		},
 		Down: func(tx *gorm.DB) error {
 			// Drop foreign keys first
-			if err := tx.Exec(`
-				ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_user_id;
-				ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_role_id;
-				DROP INDEX IF EXISTS idx_user_roles_user_id ON user_roles;
-				DROP INDEX IF EXISTS idx_user_roles_role_id ON user_roles;
-			`).Error; err != nil {
+			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_user_id").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("ALTER TABLE user_roles DROP FOREIGN KEY IF EXISTS fk_user_roles_role_id").Error; err != nil {
+				return err
+			}
+
+			// Drop indexes
+			if err := tx.Exec("DROP INDEX IF EXISTS idx_user_roles_user_id ON user_roles").Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("DROP INDEX IF EXISTS idx_user_roles_role_id ON user_roles").Error; err != nil {
 				return err
 			}
 
