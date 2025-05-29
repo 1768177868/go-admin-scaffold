@@ -1,90 +1,139 @@
-# Go Admin Framework Documentation
+# Go Admin Scaffold 文档中心
 
-## 目录
+## 文档目录
 
-### 入门指南
+### 1. 快速入门
+- [项目介绍](getting-started/introduction.md)
 - [快速开始](getting-started/quick-start.md)
 - [项目结构](getting-started/structure.md)
-- [配置说明](getting-started/configuration.md)
+- [配置指南](getting-started/configuration.md)
+- [开发环境搭建](getting-started/development.md)
 
-### 功能特性
-- [用户认证](features/authentication.md)
-- [角色权限](features/rbac.md)
-- [缓存系统](features/cache.md)
-- [任务调度](features/scheduling.md)
-
-### API 文档
-- [API 概述](api/overview.md)
-- [API 参考](api/README.md)
-
-### 测试指南
-- [测试指南](testing.md)
-
-## 核心功能
-
-### 认证与授权
+### 2. 核心功能
 - [认证系统](features/authentication.md)
-  - JWT Token 认证
-  - 刷新令牌机制
-  - 多端登录控制
-  - 登录日志记录
-
-- [权限控制](features/rbac.md)
-  - 基于角色的访问控制
+  - JWT 认证
+  - 登录/登出
+  - 密码重置
+  - 会话管理
+- [RBAC 权限系统](features/rbac.md)
+  - 角色管理
   - 权限管理
-  - 动态权限分配
-  - 权限缓存机制
+  - 用户角色分配
+  - 权限检查
+- [操作日志](features/operation-log.md)
+  - 日志记录
+  - 日志查询
+  - 日志分析
+- [国际化](features/i18n.md)
+  - 语言配置
+  - 翻译管理
+  - 动态切换
 
-### 系统功能
-- [缓存与队列](features/cache.md)
-  - Redis 缓存管理
-  - 消息队列系统
-  - 分布式锁
-  - 数据同步
+### 3. 系统组件
+- [队列系统](queue.md)
+  - Redis 队列
+  - 数据库队列
+  - 任务管理
+  - 监控工具
+- [缓存系统](features/cache.md)
+  - Redis 缓存
+  - 内存缓存
+  - 缓存策略
+- [存储系统](features/storage.md)
+  - 本地存储
+  - AWS S3 集成
+  - 文件管理
+- [数据库](database/README.md)
+  - 数据库设计
+  - 迁移管理
+  - 数据填充
+  - 查询优化
 
-- [任务调度](features/scheduling.md)
-  - 定时任务管理
-  - 异步任务处理
-  - 任务监控
-  - 失败重试机制
+### 4. API 文档
+- [API 概述](api/README.md)
+- [认证 API](api/authentication.md)
+- [用户管理 API](api/users.md)
+- [角色管理 API](api/roles.md)
+- [权限管理 API](api/permissions.md)
+- [系统管理 API](api/system.md)
 
-### API 开发
-- [API 设计](api/overview.md)
-  - RESTful API 规范
-  - 请求/响应格式
-  - 错误处理
-  - 参数验证
+### 5. 部署指南
+- [部署概述](deployment/README.md)
+- [本地开发部署](deployment/local.md)
+- [生产环境部署](deployment/production.md)
+  - Linux 部署
+  - Windows 部署
+  - Docker 部署
+- [多租户部署](deployment/multi-tenant.md)
+- [性能优化](deployment/performance.md)
+- [安全配置](deployment/security.md)
 
-### 项目开发
-- [项目配置](getting-started/configuration.md)
-  - 环境配置
-  - 数据库配置
-  - 缓存配置
-  - 日志配置
-
-- [测试规范](testing.md)
+### 6. 开发指南
+- [开发规范](advanced/development-guide.md)
+- [测试指南](testing.md)
   - 单元测试
   - 集成测试
   - 性能测试
-  - 测试覆盖率
+- [错误处理](advanced/error-handling.md)
+- [日志管理](advanced/logging.md)
+- [性能优化](advanced/performance.md)
+- [安全最佳实践](advanced/security.md)
 
-## 快速链接
+### 7. 示例教程
+- [基础示例](examples/basic/README.md)
+  - 用户管理
+  - 角色管理
+  - 权限管理
+- [高级示例](examples/advanced/README.md)
+  - 自定义中间件
+  - 自定义验证器
+  - 自定义响应
+- [集成示例](examples/integration/README.md)
+  - 第三方登录
+  - 支付集成
+  - 消息推送
 
-- [项目主页](../README.md)
-- [API 文档](api/README.md)
-- [快速开始](getting-started/quick-start.md)
-- [测试指南](testing.md)
+### 8. 常见问题
+- [FAQ](faq/README.md)
+- [故障排除](faq/troubleshooting.md)
+- [更新日志](changelog.md)
 
-## 文档更新
+## 文档更新日志
 
-本文档持续更新中。如果发现任何问题或有改进建议，请提交 Issue 或 Pull Request。
+### 2024-03-xx
+- 重新组织文档结构
+- 添加队列系统详细文档
+- 更新部署指南
+- 补充开发环境配置说明
+
+### 2024-03-xx
+- 添加 RBAC 系统更新说明
+- 更新测试文档
+- 补充 API 文档
 
 ## 贡献指南
 
-如果您想为项目文档做出贡献，请遵循以下步骤：
+欢迎为文档做出贡献！如果您发现任何问题或有改进建议，请：
 
-1. Fork 项目仓库
-2. 创建您的特性分支 (`git checkout -b feature/amazing-doc`)
-3. 提交您的改动 (`git commit -m 'Add some amazing doc'`)
-4. 推送到分支 (`git push origin feature/amazing-doc`)
-5. 创建一个 Pull Request 
+1. 提交 Issue 描述问题或建议
+2. 提交 Pull Request 进行修改
+3. 在提交 PR 时，请确保：
+   - 更新文档目录
+   - 添加适当的标签
+   - 提供清晰的修改说明
+
+## 文档维护
+
+- 文档使用 Markdown 格式编写
+- 图片等资源文件存放在 `docs/assets` 目录
+- 代码示例应包含完整的上下文
+- 保持文档的及时更新
+- 定期检查文档的准确性
+
+## 联系方式
+
+如有文档相关的问题或建议，请：
+
+- 提交 Issue
+- 发送邮件至：your-email@example.com
+- 加入技术交流群：xxx 

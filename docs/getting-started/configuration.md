@@ -1,250 +1,249 @@
-# 配置系统
+# 配置说明
 
-本框架采用简洁的YAML配置系统，便于管理和部署。
+本文档详细说明了 Go Admin Scaffold 的配置选项和使用方法。
 
 ## 配置文件
 
-### 配置文件结构
+项目使用 YAML 格式的配置文件，主要配置文件位于 `configs/` 目录：
 
-项目只使用两个配置文件：
+- `config.yaml` - 主配置文件
+- `config.example.yaml` - 配置示例文件
+- `config.dev.yaml` - 开发环境配置
+- `config.prod.yaml` - 生产环境配置
 
-- `configs/config.yaml` - 实际配置文件（生产使用）
-- `configs/config.example.yaml` - 配置示例文件（模板）
+## 配置结构
 
-### 配置示例
-
-`configs/config.example.yaml`：
+### 1. 应用配置 (app)
 
 ```yaml
 app:
-  name: "Go Admin"
-  env: "development"  # development, production, test
-  mode: "development"
-  debug: true
-  baseUrl: "http://localhost:8080"
-  api_prefix: "/api/v1"
-  port: 8080
+  name: "Go Admin"           # 应用名称
+  env: "development"         # 运行环境：development, production, testing
+  debug: true               # 调试模式
+  port: 8080                # 服务端口
+  jwt_secret: "your-secret" # JWT密钥
+  jwt_expire: 24h           # JWT过期时间
+  timezone: "Asia/Shanghai" # 时区设置
+  locale: "zh_CN"           # 默认语言
+```
 
-server:
-  address: "0.0.0.0:8080"
-  mode: "debug"  # debug, release, test
+### 2. 数据库配置 (mysql)
 
+```yaml
 mysql:
-  host: "localhost"
-  port: 3306
-  username: "root"
-  password: ""
-  database: "go_admin"
-  max_idle_conns: 10
-  max_open_conns: 100
-  conn_max_lifetime: 3600  # seconds
+  host: "localhost"         # 数据库主机
+  port: 3306               # 数据库端口
+  username: "root"         # 数据库用户名
+  password: "password"     # 数据库密码
+  database: "go_admin"     # 数据库名称
+  charset: "utf8mb4"       # 字符集
+  max_idle_conns: 10       # 最大空闲连接数
+  max_open_conns: 100      # 最大打开连接数
+  conn_max_lifetime: 1h    # 连接最大生命周期
+```
 
+### 3. Redis配置 (redis)
+
+```yaml
 redis:
-  host: "localhost"
-  port: 6379
-  password: ""
-  db: 0
+  host: "localhost"         # Redis主机
+  port: 6379               # Redis端口
+  password: ""             # Redis密码
+  db: 0                    # 数据库索引
+  pool_size: 10            # 连接池大小
+  min_idle_conns: 5        # 最小空闲连接数
+  dial_timeout: 5s         # 连接超时时间
+  read_timeout: 3s         # 读取超时时间
+  write_timeout: 3s        # 写入超时时间
+```
 
-jwt:
-  secret: "your-secret-key-here"  # Change this in production
-  expire_time: 86400  # 24 hours
+### 4. 日志配置 (logger)
 
-log:
-  level: "debug"  # debug, info, warn, error
-  filename: "storage/logs/app.log"
-  max_size: 100    # megabytes
-  max_backups: 3
-  max_age: 28      # days
+```yaml
+logger:
+  level: "debug"           # 日志级别：debug, info, warn, error
+  filename: "logs/app.log" # 日志文件路径
+  max_size: 100           # 单个日志文件最大大小(MB)
+  max_age: 30             # 日志文件保留天数
+  max_backups: 10         # 最大保留文件数
+  compress: true          # 是否压缩
+  json_format: false      # 是否使用JSON格式
+```
 
-cors:
-  allow_origins: ["*"]  # Use specific domains in production
-  allow_methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
-  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
-  allow_credentials: true
-  max_age: 86400  # seconds
+### 5. 队列配置 (queue)
 
-i18n:
-  default_locale: "en"
-  load_path: "./locales"
-  available_locales: ["en", "zh"]
+```yaml
+queue:
+  default: "redis"         # 默认队列驱动：redis, database
+  connections:
+    redis:
+      driver: "redis"      # Redis队列驱动
+      queue: "default"     # 默认队列名称
+      retry_after: 90      # 重试等待时间(秒)
+      timeout: 60          # 任务超时时间(秒)
+    database:
+      driver: "database"   # 数据库队列驱动
+      table: "jobs"        # 任务表名
+      queue: "default"     # 默认队列名称
+      retry_after: 90      # 重试等待时间(秒)
+      timeout: 60          # 任务超时时间(秒)
+```
 
+### 6. 存储配置 (storage)
+
+```yaml
 storage:
-  driver: "local"  # local, s3
-  options:
+  default: "local"         # 默认存储驱动：local, s3
+  disks:
     local:
-      path: "storage/uploads"
+      driver: "local"      # 本地存储驱动
+      root: "storage/app"  # 存储根目录
+      url: "http://localhost:8080/storage" # 访问URL
     s3:
-      region: "us-west-2"
-      bucket: "your-bucket"
-      access_key: ""
-      secret_key: ""
+      driver: "s3"         # S3存储驱动
+      key: ""              # AWS Access Key
+      secret: ""           # AWS Secret Key
+      region: "us-east-1"  # AWS Region
+      bucket: ""           # S3 Bucket
+      url: ""              # 自定义域名
+```
+
+### 7. 缓存配置 (cache)
+
+```yaml
+cache:
+  default: "redis"         # 默认缓存驱动：redis, memory
+  stores:
+    redis:
+      driver: "redis"      # Redis缓存驱动
+      prefix: "cache:"     # 缓存键前缀
+    memory:
+      driver: "memory"     # 内存缓存驱动
+      prefix: "cache:"     # 缓存键前缀
+```
+
+## 环境变量
+
+项目支持通过环境变量覆盖配置文件中的设置：
+
+```bash
+# 应用配置
+APP_NAME=GoAdmin
+APP_ENV=production
+APP_DEBUG=false
+APP_PORT=8080
+APP_JWT_SECRET=your-secret
+APP_TIMEZONE=Asia/Shanghai
+
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=password
+DB_DATABASE=go_admin
+
+# Redis配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# 其他配置
+QUEUE_CONNECTION=redis
+STORAGE_DISK=s3
+CACHE_DRIVER=redis
 ```
 
 ## 配置使用
 
-### 初始化配置
-
-```bash
-# 复制配置示例文件
-cp configs/config.example.yaml configs/config.yaml
-
-# 根据环境修改配置
-vim configs/config.yaml
-```
-
-### 在代码中访问配置
+### 1. 获取配置
 
 ```go
-package main
+import "github.com/yourusername/go-admin-scaffold/pkg/config"
 
-import "app/internal/config"
+// 获取配置
+port := config.Get("app.port")
+dbHost := config.Get("mysql.host")
 
-func main() {
-    // 加载配置
-    cfg, err := config.LoadConfig()
-    if err != nil {
-        log.Fatal(err)
-    }
+// 获取带默认值的配置
+timeout := config.Get("redis.timeout", 60) // 默认60秒
 
-    // 访问配置值
-    appName := cfg.App.Name
-    dbHost := cfg.MySQL.Host
-    redisPort := cfg.Redis.Port
-}
+// 获取环境变量
+env := config.Get("app.env", "development")
 ```
 
-### 配置注入
-
-使用依赖注入在服务中使用配置：
+### 2. 动态配置
 
 ```go
-type UserService struct {
-    config *config.Config
-    db     *gorm.DB
-}
+// 设置配置
+config.Set("app.name", "New Name")
 
-func NewUserService(cfg *config.Config, db *gorm.DB) *UserService {
-    return &UserService{
-        config: cfg,
-        db:     db,
-    }
+// 检查配置是否存在
+if config.Has("app.debug") {
+    // ...
 }
 ```
 
-## 环境特定配置
+## 最佳实践
 
-针对不同环境，直接修改 `configs/config.yaml` 中的相应字段：
+### 1. 环境配置
 
-### 开发环境
+- 开发环境：使用 `config.dev.yaml`
+- 测试环境：使用 `config.test.yaml`
+- 生产环境：使用 `config.prod.yaml`
+- 敏感信息：使用环境变量
 
-```yaml
-app:
-  env: "development"
-  mode: "development"
-  debug: true
+### 2. 安全建议
 
-server:
-  mode: "debug"
+- 生产环境禁用调试模式
+- 使用强密码和密钥
+- 定期轮换密钥
+- 限制数据库访问
+- 使用环境变量存储敏感信息
 
-log:
-  level: "debug"
-```
+### 3. 性能优化
 
-### 生产环境
+- 合理设置连接池大小
+- 配置适当的超时时间
+- 使用缓存减少数据库访问
+- 根据需求调整队列配置
 
-```yaml
-app:
-  env: "production"
-  mode: "production"
-  debug: false
-  baseUrl: "https://your-domain.com"
+### 4. 维护建议
 
-server:
-  mode: "release"
+- 保持配置文件版本控制
+- 记录配置变更历史
+- 定期检查配置有效性
+- 备份重要配置
 
-mysql:
-  host: "prod-db-host"
-  username: "prod-user"
-  password: "secure-password"
-  database: "prod_database"
+## 常见问题
 
-jwt:
-  secret: "production-secret-key"
+### 1. 配置不生效
 
-log:
-  level: "info"
-  filename: "/var/log/go-admin/app.log"
+检查：
+- 配置文件路径是否正确
+- 环境变量是否正确设置
+- 配置项名称是否正确
+- 配置格式是否正确
 
-cors:
-  allow_origins: ["https://your-domain.com"]
-```
+### 2. 环境变量问题
 
-## 配置验证
+检查：
+- 环境变量名称是否正确
+- 环境变量是否已加载
+- 环境变量值是否正确
+- 是否有权限访问
 
-配置加载时会进行基本验证：
+### 3. 配置冲突
 
-```go
-func (c *Config) Validate() error {
-    if c.App.Name == "" {
-        return errors.New("app.name is required")
-    }
-    
-    if c.MySQL.Host == "" {
-        return errors.New("mysql.host is required")
-    }
-    
-    if c.JWT.Secret == "" || c.JWT.Secret == "your-secret-key-here" {
-        return errors.New("jwt.secret must be set to a secure value")
-    }
-    
-    return nil
-}
-```
+解决：
+- 检查配置文件优先级
+- 确认环境变量覆盖
+- 验证配置加载顺序
+- 检查配置合并逻辑
 
-## 敏感信息处理
+## 相关文档
 
-1. **不要提交包含敏感信息的 config.yaml**
-2. **生产环境配置建议**：
-   - 使用强密码和随机密钥
-   - 限制数据库用户权限
-   - 使用HTTPS
-   - 设置具体的CORS域名
-
-3. **密钥生成**：
-```bash
-# 生成JWT密钥
-openssl rand -base64 32
-
-# 生成App密钥
-openssl rand -hex 32
-```
-
-## 部署最佳实践
-
-1. **配置文件管理**：
-   - 在服务器上直接创建 `config.yaml`
-   - 或通过配置管理工具部署
-   - 确保文件权限安全（600）
-
-2. **不同环境的配置**：
-```bash
-# 开发环境
-configs/config.yaml  # 开发配置
-
-# 测试环境  
-configs/config.yaml  # 测试配置
-
-# 生产环境
-configs/config.yaml  # 生产配置
-```
-
-3. **配置备份**：
-```bash
-# 备份当前配置
-cp configs/config.yaml configs/config.backup.yaml
-
-# 恢复配置
-cp configs/config.backup.yaml configs/config.yaml
-```
-
-这种简化的配置系统让部署和管理变得更加直观和可靠。 
+- [快速开始指南](quick-start.md)
+- [项目结构说明](structure.md)
+- [开发环境配置](../advanced/development.md)
+- [部署指南](../deployment/README.md) 
