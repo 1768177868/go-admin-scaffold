@@ -113,6 +113,29 @@ func (h *WSHandler) JoinGroup(c *gin.Context) {
 	response.Success(c, gin.H{"message": "Successfully joined group"})
 }
 
+// LeaveGroup handles leaving a chat group
+// @Summary Leave Chat Group
+// @Description Removes a user from a chat group
+// @Tags WebSocket
+// @Accept  json
+// @Produce  json
+// @Param user_id query string true "User ID"
+// @Param group_id query string true "Group ID"
+// @Success 200 {object} map[string]string
+// @Router /ws/leave [post]
+func (h *WSHandler) LeaveGroup(c *gin.Context) {
+	userID := c.Query("user_id")
+	groupID := c.Query("group_id")
+
+	if userID == "" || groupID == "" {
+		response.ParamError(c, "user_id and group_id are required")
+		return
+	}
+
+	h.manager.LeaveGroup(groupID, userID)
+	response.Success(c, gin.H{"message": "Successfully left group"})
+}
+
 // SendMessage handles sending messages
 // @Summary Send Message
 // @Description Sends a message (private, group, or announcement)

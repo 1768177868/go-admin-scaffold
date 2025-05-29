@@ -136,6 +136,15 @@
             justify-content: space-between;
             align-items: center;
         }
+        .group-item button {
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: #f44336;
+            margin-left: 8px;
+        }
+        .group-item button:hover {
+            background-color: #d32f2f;
+        }
         .timestamp {
             color: #666;
             font-size: 0.8em;
@@ -484,8 +493,51 @@
             groups.forEach(groupId => {
                 const div = document.createElement('div');
                 div.className = 'group-item';
-                div.textContent = `群组 ${groupId}`;
+                
+                const groupInfo = document.createElement('span');
+                groupInfo.textContent = `群组 ${groupId}`;
+                div.appendChild(groupInfo);
+                
+                const leaveBtn = document.createElement('button');
+                leaveBtn.textContent = '退出';
+                leaveBtn.onclick = () => leaveGroup(groupId);
+                div.appendChild(leaveBtn);
+                
                 groupList.appendChild(div);
+            });
+        }
+
+        function leaveGroup(groupId) {
+            if (!confirm(`确定要退出群组 ${groupId} 吗？`)) {
+                return;
+            }
+
+            fetch(`http://localhost:8080/api/admin/v1/ws/leave?user_id=${userId}&group_id=${groupId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    groups.delete(groupId);
+                    updateGroupList();
+                    displaySystemMessage(`已退出群组：${groupId}`, userId);
+                    
+                    // 如果当前选择的是这个群组，清空接收者
+                    const messageType = document.getElementById('messageType');
+                    const recipient = document.getElementById('recipient');
+                    if (messageType.value === '2' && recipient.value === groupId) {
+                        recipient.value = '';
+                    }
+                } else {
+                    alert(data.message || '退出群组失败');
+                }
+            })
+            .catch(error => {
+                console.error('退出群组出错：', error);
+                displaySystemMessage(`退出群组失败：${error.message}`, userId);
             });
         }
 

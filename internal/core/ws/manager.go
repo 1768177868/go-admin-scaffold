@@ -201,10 +201,64 @@ func (m *Manager) LeaveGroup(groupID, clientID string) {
 	defer m.mu.Unlock()
 
 	if group, ok := m.Groups[groupID]; ok {
+		// 先检查用户是否在群组中
+		if !group[clientID] {
+			log.Printf("Client %s is not in group %s", clientID, groupID)
+			return
+		}
+
+		// 从群组中移除用户
 		delete(group, clientID)
+		log.Printf("Client %s left group %s", clientID, groupID)
+
+		// 如果群组为空，删除群组
 		if len(group) == 0 {
 			delete(m.Groups, groupID)
+			log.Printf("Group %s deleted as it's empty", groupID)
 		}
+
+		// 从客户端的群组列表中移除
+		if client, ok := m.Clients[clientID]; ok {
+			delete(client.Groups, groupID)
+		}
+
+		// 发送退出通知给群组中的所有成员
+		notifyMsg := &Message{
+			Type:      MessageTypeAnnouncement,
+			From:      clientID,
+			Content:   fmt.Sprintf("用户 %s 退出了群组", clientID),
+			Timestamp: time.Now().Unix(),
+		}
+
+		data, err := json.Marshal(notifyMsg)
+		if err != nil {
+			log.Printf("Error marshaling leave notification: %v", err)
+			return
+		}
+
+		// 发送给所有群组成员
+		for memberID := range group {
+			if client, ok := m.Clients[memberID]; ok {
+				select {
+				case client.Send <- data:
+					log.Printf("Leave notification sent to %s", memberID)
+				default:
+					log.Printf("Failed to send leave notification to %s", memberID)
+				}
+			}
+		}
+
+		// 发送给离开的成员
+		if client, ok := m.Clients[clientID]; ok {
+			select {
+			case client.Send <- data:
+				log.Printf("Leave notification sent to leaving member %s", clientID)
+			default:
+				log.Printf("Failed to send leave notification to leaving member %s", clientID)
+			}
+		}
+	} else {
+		log.Printf("Group %s not found", groupID)
 	}
 }
 

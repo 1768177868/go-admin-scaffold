@@ -33,6 +33,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		wsHandler := handlers.NewWSHandler()
 		adminV1.GET("/ws", wsHandler.HandleWebSocket)
 		adminV1.POST("/ws/join", middleware.JWT(), wsHandler.JoinGroup)
+		adminV1.POST("/ws/leave", middleware.JWT(), wsHandler.LeaveGroup)
 		adminV1.POST("/ws/send", middleware.JWT(), wsHandler.SendMessage)
 	}
 
