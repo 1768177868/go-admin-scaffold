@@ -56,26 +56,19 @@ Content-Type: application/json
 
 ### 认证相关
 
-- [登录](auth.md#login)
-- [注销](auth.md#logout)
-- [刷新令牌](auth.md#refresh-token)
+- [认证概述](overview.md#authentication)
+- [登录认证](overview.md#login)
+- [刷新令牌](overview.md#refresh-token)
 
 ### 用户管理
 
-- [用户列表](users.md#list)
-- [创建用户](users.md#create)
-- [更新用户](users.md#update)
-- [删除用户](users.md#delete)
+- [用户管理概述](overview.md#user-management)
+- [用户接口](overview.md#user-api)
 
 ### 角色权限
 
-- [角色管理](roles.md)
-- [权限管理](permissions.md)
-
-### 系统管理
-
-- [系统配置](system.md#config)
-- [操作日志](system.md#operation-log)
+- [权限管理](overview.md#permissions)
+- [角色管理](overview.md#roles)
 
 ## 错误码
 
@@ -133,5 +126,5 @@ func main() {
 ## 相关文档
 
 - [认证系统](../features/authentication.md)
-- [错误处理](../advanced/error-handling.md)
-- [开发指南](../development/README.md) 
+- [项目结构](../getting-started/structure.md)
+- [配置说明](../getting-started/configuration.md) 

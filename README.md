@@ -6,22 +6,21 @@ A modern, production-ready admin backend template built with Go.
 
 - 🔐 JWT Authentication - [Authentication Guide](docs/features/authentication.md)
 - 👥 Role-Based Access Control (RBAC) - [RBAC Documentation](docs/features/rbac.md)
-- 📝 Operation Logging - [Logging Guide](docs/features/logging.md)
-- 🌐 I18n Support - [Internationalization](docs/features/i18n.md)
-- 🔄 Redis Queue System - [Queue System](docs/features/queue.md)
-- 📦 AWS S3 Integration - [S3 Integration](docs/features/s3.md)
-- 🗄️ MySQL Database - [Database Guide](docs/database/README.md)
+- 📝 Operation Logging
+- 🌐 I18n Support
+- �� Redis Queue System - [Cache & Queue](docs/features/cache.md)
+- 📦 AWS S3 Integration
+- 🗄️ MySQL Database
 - 📊 API Documentation - [API Reference](docs/api/README.md)
+- ⏱️ Task Scheduling - [Scheduling Guide](docs/features/scheduling.md)
 
 ## Documentation
 
-- [Getting Started Guide](docs/getting-started/README.md)
-- [Feature Documentation](docs/features/README.md)
-- [API Reference](docs/api/README.md)
-- [Database Schema](docs/database/README.md)
+- [Getting Started Guide](docs/getting-started/quick-start.md)
+- [Project Structure](docs/getting-started/structure.md)
+- [Configuration Guide](docs/getting-started/configuration.md)
+- [API Documentation](docs/api/README.md)
 - [Testing Guide](docs/testing.md)
-- [Advanced Topics](docs/advanced/README.md)
-- [Example Usage](docs/examples/README.md)
 
 ## Quick Start
 
@@ -36,7 +35,7 @@ A modern, production-ready admin backend template built with Go.
 1. Clone the repository:
 ```bash
 git clone <your-repo-url>
-cd app
+cd go-admin-scaffold
 ```
 
 2. Install dependencies:
@@ -82,9 +81,8 @@ docker run -d \
 │   └── config.example.yaml  # Example configuration
 ├── docs/               # Documentation files
 │   ├── api/           # API documentation
-│   ├── database/      # Database documentation
 │   ├── features/      # Feature documentation
-│   └── examples/      # Usage examples
+│   └── getting-started/ # Getting started guides
 ├── internal/            # Private application code
 │   ├── api/            # API handlers
 │   ├── config/         # Configuration structures

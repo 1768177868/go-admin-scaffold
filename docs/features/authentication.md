@@ -68,5 +68,5 @@ func (h *Handler) GetUserInfo(c *gin.Context) {
 
 ## 相关文档
 
-- [错误处理](../advanced/error-handling.md)
-- [安全最佳实践](../deployment/security.md) 
+- [API 文档](../api/README.md)
+- [配置说明](../getting-started/configuration.md) 
