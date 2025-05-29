@@ -16,7 +16,7 @@ type Role struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-	PermList    []string       `json:"permissions" gorm:"type:json;column:permissions"`
+	PermList    []string       `json:"permissions" gorm:"type:json;column:permissions;serializer:json"`
 	Users       []User         `json:"users,omitempty" gorm:"many2many:user_roles;"`
 }
 

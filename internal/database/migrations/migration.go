@@ -22,16 +22,16 @@ func Migrate() error {
 func Seed() error {
 	db := database.DB()
 
-	// Create default admin role
-	permissions := []string{"users.manage", "roles.manage", "logs.view"}
+	// Create default admin role with permissions
 	adminRole := &models.Role{
 		Name:        "admin",
 		Code:        "admin",
 		Description: "System administrator with full access",
 		Status:      1,
-		PermList:    permissions,
+		PermList:    []string{"users.manage", "roles.manage", "logs.view"},
 	}
-	if err := db.FirstOrCreate(adminRole, models.Role{Name: "admin"}).Error; err != nil {
+
+	if err := db.Where(models.Role{Name: "admin"}).FirstOrCreate(adminRole).Error; err != nil {
 		return err
 	}
 
@@ -44,7 +44,8 @@ func Seed() error {
 		Status:   1,
 		Roles:    []models.Role{*adminRole},
 	}
-	if err := db.FirstOrCreate(adminUser, models.User{Username: "admin"}).Error; err != nil {
+
+	if err := db.Where(models.User{Username: "admin"}).FirstOrCreate(adminUser).Error; err != nil {
 		return err
 	}
 
