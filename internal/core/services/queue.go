@@ -22,12 +22,38 @@ type QueueService struct {
 // NewQueueService 创建队列服务
 func NewQueueService() (*QueueService, error) {
 	// 加载配置
+	driver := viper.GetString("queue.driver")
+	queueName := viper.GetString("queue.queue")
+
 	config := queue.Config{
-		Driver: viper.GetString("queue.driver"),
-		Options: map[string]interface{}{
-			"connection": viper.GetString(fmt.Sprintf("queue.connection.%s", viper.GetString("queue.driver"))),
-			"queue":      viper.GetString("queue.queue"),
-		},
+		Driver:  driver,
+		Options: make(map[string]interface{}),
+	}
+
+	// 根据驱动类型设置选项
+	switch driver {
+	case "redis":
+		// 构建Redis连接字符串
+		redisHost := viper.GetString("redis.host")
+		redisPort := viper.GetInt("redis.port")
+		redisDB := viper.GetInt("redis.db")
+		redisPassword := viper.GetString("redis.password")
+
+		connectionStr := fmt.Sprintf("redis://%s:%d/%d", redisHost, redisPort, redisDB)
+		if redisPassword != "" {
+			connectionStr = fmt.Sprintf("redis://:%s@%s:%d/%d", redisPassword, redisHost, redisPort, redisDB)
+		}
+
+		config.Options["connection"] = connectionStr
+		config.Options["queue"] = queueName
+
+	case "database", "mysql":
+		// 这里需要传入数据库连接实例
+		// 暂时返回错误，提示需要在外部传入数据库连接
+		return nil, fmt.Errorf("database driver requires external database connection setup")
+
+	default:
+		return nil, fmt.Errorf("unsupported queue driver: %s", driver)
 	}
 
 	// 创建队列管理器

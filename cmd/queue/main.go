@@ -16,12 +16,13 @@ import (
 
 var (
 	// 命令行参数
-	configFile string
-	queueName  string
-	listQueues bool
-	clearQueue bool
-	stopQueue  bool
-	startQueue bool
+	configFile  string
+	queueName   string
+	listQueues  bool
+	clearQueue  bool
+	stopQueue   bool
+	startQueue  bool
+	statusQueue bool
 )
 
 func init() {
@@ -32,6 +33,7 @@ func init() {
 	flag.BoolVar(&clearQueue, "clear", false, "清空队列")
 	flag.BoolVar(&stopQueue, "stop", false, "停止队列")
 	flag.BoolVar(&startQueue, "start", false, "启动队列")
+	flag.BoolVar(&statusQueue, "status", false, "查询队列状态")
 }
 
 func main() {
@@ -104,6 +106,43 @@ func main() {
 		// 停止服务
 		queueService.Stop()
 		fmt.Println("Queue service stopped")
+
+	case statusQueue:
+		// 查询队列状态
+		if queueName == "" {
+			// 如果没有指定队列名称，显示所有队列的状态
+			queues := queueService.GetActiveQueues()
+			if len(queues) == 0 {
+				fmt.Println("No active queues")
+				return
+			}
+
+			fmt.Println("Queue Status:")
+			fmt.Println("=============")
+			ctx := context.Background()
+			for _, name := range queues {
+				size, err := queueService.Size(ctx, name)
+				if err != nil {
+					fmt.Printf("%-20s: Error - %v\n", name, err)
+				} else {
+					fmt.Printf("%-20s: %d jobs\n", name, size)
+				}
+			}
+		} else {
+			// 查询指定队列的状态
+			ctx := context.Background()
+			size, err := queueService.Size(ctx, queueName)
+			if err != nil {
+				log.Fatalf("Failed to get queue size for %s: %v", queueName, err)
+			}
+
+			fmt.Printf("Queue: %s\n", queueName)
+			fmt.Printf("Jobs in queue: %d\n", size)
+
+			// 获取工作进程数量
+			workerCount := queueService.GetWorkerCount()
+			fmt.Printf("Active workers: %d\n", workerCount)
+		}
 
 	default:
 		// 显示帮助信息
