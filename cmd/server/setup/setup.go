@@ -40,14 +40,7 @@ func InitializeApp() (*App, error) {
 	}
 
 	// Initialize database
-	if err := database.Init(&database.Config{
-		Driver:   "mysql",
-		Host:     cfg.MySQL.Host,
-		Port:     cfg.MySQL.Port,
-		Username: cfg.MySQL.Username,
-		Password: cfg.MySQL.Password,
-		Database: cfg.MySQL.Database,
-	}); err != nil {
+	if err := database.Init(cfg); err != nil {
 		return nil, err
 	}
 

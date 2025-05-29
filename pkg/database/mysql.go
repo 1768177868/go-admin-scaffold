@@ -17,9 +17,9 @@ type Config struct {
 	Database string
 }
 
-var db *gorm.DB
+var mysqlDB *gorm.DB
 
-func Init(config *Config) error {
+func InitMySQL(config *Config) error {
 	var err error
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -30,7 +30,7 @@ func Init(config *Config) error {
 		config.Database,
 	)
 
-	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+	mysqlDB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
@@ -38,7 +38,7 @@ func Init(config *Config) error {
 	}
 
 	// Set connection pool settings
-	sqlDB, err := db.DB()
+	sqlDB, err := mysqlDB.DB()
 	if err != nil {
 		return fmt.Errorf("failed to get database instance: %w", err)
 	}
@@ -49,15 +49,15 @@ func Init(config *Config) error {
 	return nil
 }
 
-// GetDB returns the database instance
-func GetDB() *gorm.DB {
-	return db
+// GetMySQLDB returns the database instance
+func GetMySQLDB() *gorm.DB {
+	return mysqlDB
 }
 
-// Close closes the database connection
-func Close() error {
-	if db != nil {
-		sqlDB, err := db.DB()
+// CloseMySQL closes the database connection
+func CloseMySQL() error {
+	if mysqlDB != nil {
+		sqlDB, err := mysqlDB.DB()
 		if err != nil {
 			return err
 		}

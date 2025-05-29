@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"app/internal/models"
+	"app/internal/core/models"
 	"app/pkg/database"
 )
 
@@ -13,7 +13,8 @@ func Migrate() error {
 	return db.AutoMigrate(
 		&models.User{},
 		&models.Role{},
-		&models.Permission{},
+		&models.LoginLog{},
+		&models.OperationLog{},
 	)
 }
 
@@ -22,7 +23,10 @@ func Rollback() error {
 	db := database.DB()
 
 	// Drop tables in reverse order
-	if err := db.Migrator().DropTable(&models.Permission{}); err != nil {
+	if err := db.Migrator().DropTable(&models.OperationLog{}); err != nil {
+		return err
+	}
+	if err := db.Migrator().DropTable(&models.LoginLog{}); err != nil {
 		return err
 	}
 	if err := db.Migrator().DropTable(&models.Role{}); err != nil {

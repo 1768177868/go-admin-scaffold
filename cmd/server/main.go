@@ -29,15 +29,7 @@ func main() {
 	}
 
 	// Initialize database
-	err = database.Setup(&database.DBConfig{
-		Driver:   "mysql",
-		Host:     cfg.MySQL.Host,
-		Port:     cfg.MySQL.Port,
-		Username: cfg.MySQL.Username,
-		Password: cfg.MySQL.Password,
-		Database: cfg.MySQL.Database,
-	})
-	if err != nil {
+	if err := database.Init(cfg); err != nil {
 		log.Fatal(err)
 	}
 

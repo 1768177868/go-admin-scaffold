@@ -1,10 +1,10 @@
 package database
 
 import (
-	"fmt"
 	"sync"
 
-	"gorm.io/driver/mysql"
+	"app/internal/config"
+
 	"gorm.io/gorm"
 )
 
@@ -13,28 +13,20 @@ var (
 	once     sync.Once
 )
 
-type DBConfig struct {
-	Driver   string
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-}
-
-// Setup initializes the database connection
-func Setup(config *DBConfig) error {
+// Init initializes the database connection
+func Init(cfg *config.Config) error {
 	var err error
 	once.Do(func() {
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			config.Username,
-			config.Password,
-			config.Host,
-			config.Port,
-			config.Database,
-		)
-
-		instance, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		err = InitMySQL(&Config{
+			Host:     cfg.MySQL.Host,
+			Port:     cfg.MySQL.Port,
+			Username: cfg.MySQL.Username,
+			Password: cfg.MySQL.Password,
+			Database: cfg.MySQL.Database,
+		})
+		if err == nil {
+			instance = GetMySQLDB()
+		}
 	})
 	return err
 }
@@ -42,4 +34,9 @@ func Setup(config *DBConfig) error {
 // DB returns the database instance
 func DB() *gorm.DB {
 	return instance
+}
+
+// Close closes the database connection
+func Close() error {
+	return CloseMySQL()
 }

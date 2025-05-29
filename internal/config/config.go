@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds all configuration for the application
 type Config struct {
 	App     AppConfig     `mapstructure:"app"`
 	JWT     JWTConfig     `mapstructure:"jwt"`
@@ -25,11 +26,13 @@ type Config struct {
 	Storage StorageConfig `mapstructure:"storage"`
 }
 
+// ServerConfig holds server configuration
 type ServerConfig struct {
 	Address string `mapstructure:"address"`
 	Mode    string `mapstructure:"mode"`
 }
 
+// AppConfig holds application configuration
 type AppConfig struct {
 	Name      string `mapstructure:"name"`
 	Mode      string `mapstructure:"mode"`
@@ -40,11 +43,13 @@ type AppConfig struct {
 	BaseURL   string `mapstructure:"baseUrl"`
 }
 
+// JWTConfig holds JWT configuration
 type JWTConfig struct {
 	Secret     string `mapstructure:"secret"`
 	ExpireTime int    `mapstructure:"expire_time"`
 }
 
+// MySQLConfig holds MySQL database configuration
 type MySQLConfig struct {
 	Host            string `mapstructure:"host"`
 	Port            int    `mapstructure:"port"`
@@ -56,6 +61,7 @@ type MySQLConfig struct {
 	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`
 }
 
+// RedisConfig holds Redis configuration
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -63,6 +69,7 @@ type RedisConfig struct {
 	DB       int    `mapstructure:"db"`
 }
 
+// LogConfig holds log configuration
 type LogConfig struct {
 	Level      string `mapstructure:"level"`
 	Filename   string `mapstructure:"filename"`
@@ -71,17 +78,20 @@ type LogConfig struct {
 	MaxBackups int    `mapstructure:"max_backups"`
 }
 
+// CacheConfig holds cache configuration
 type CacheConfig struct {
 	Driver  string                 `mapstructure:"driver"`
 	Prefix  string                 `mapstructure:"prefix"`
 	Options map[string]interface{} `mapstructure:"options"`
 }
 
+// QueueConfig holds queue configuration
 type QueueConfig struct {
 	Driver  string                 `mapstructure:"driver"`
 	Options map[string]interface{} `mapstructure:"options"`
 }
 
+// CORSConfig holds CORS configuration
 type CORSConfig struct {
 	AllowOrigins     []string      `mapstructure:"allow_origins"`
 	AllowMethods     []string      `mapstructure:"allow_methods"`
@@ -91,6 +101,7 @@ type CORSConfig struct {
 	MaxAge           time.Duration `mapstructure:"max_age"`
 }
 
+// StorageConfig holds storage configuration
 type StorageConfig struct {
 	Driver  string                 `mapstructure:"driver"`
 	Options map[string]interface{} `mapstructure:"options"`
