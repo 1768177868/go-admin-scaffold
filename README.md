@@ -8,7 +8,7 @@ A modern, production-ready admin backend template built with Go.
 - 👥 Role-Based Access Control (RBAC) - [RBAC Documentation](docs/features/rbac.md)
 - 📝 Operation Logging
 - 🌐 I18n Support
-- �� Redis Queue System - [Cache & Queue](docs/features/cache.md)
+- 💫 Redis Queue System - [Cache & Queue](docs/features/cache.md)
 - 📦 AWS S3 Integration
 - 🗄️ MySQL Database
 - 📊 API Documentation - [API Reference](docs/api/README.md)
