@@ -583,6 +583,456 @@ queue:
 - 基本队列功能
 - 命令行工具
 
+## 生产环境部署
+
+### 运行队列服务
+
+在生产环境中，队列系统提供了两个可执行文件用于运行和管理队列：
+
+1. **queue-cmd.exe**: 队列管理工具
+2. **queue-status.exe**: 队列状态查看工具
+3. **worker.exe**: 队列工作进程
+
+#### 启动队列
+
+方式一：使用队列管理工具
+```bash
+# 启动队列服务
+./queue-cmd.exe -start
+
+# 使用指定配置文件启动
+./queue-cmd.exe -config=configs/production.yaml -start
+
+# 停止所有队列
+./queue-cmd.exe -stop
+
+# 列出所有队列
+./queue-cmd.exe -list
+
+# 清空指定队列
+./queue-cmd.exe -clear -queue=default
+```
+
+方式二：直接运行工作进程
+```bash
+# 直接运行工作进程
+./worker.exe
+```
+
+#### 查看队列状态
+```bash
+# 查看所有队列状态
+./queue-status.exe -all
+
+# 查看指定队列状态
+./queue-status.exe -queue=default
+
+# 查看指定驱动的队列状态
+./queue-status.exe -queue=high -driver=database
+```
+
+### 进程管理
+
+#### Linux (systemd)
+
+创建服务配置文件 `/etc/systemd/system/go-admin-queue.service`:
+
+```ini
+[Unit]
+Description=Go Admin Queue Worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/your/app
+ExecStart=/path/to/your/app/worker.exe
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+管理服务：
+```bash
+# 启动服务
+sudo systemctl start go-admin-queue
+
+# 设置开机自启
+sudo systemctl enable go-admin-queue
+
+# 查看状态
+sudo systemctl status go-admin-queue
+
+# 查看日志
+sudo journalctl -u go-admin-queue -f
+```
+
+#### Windows (NSSM)
+
+使用 NSSM 安装为 Windows 服务：
+
+```powershell
+# 安装服务
+nssm install GoAdminQueue "C:\path\to\your\app\worker.exe"
+nssm set GoAdminQueue AppDirectory "C:\path\to\your\app"
+nssm set GoAdminQueue DisplayName "Go Admin Queue Worker"
+nssm set GoAdminQueue Description "Go Admin Queue Worker Service"
+
+# 启动服务
+nssm start GoAdminQueue
+
+# 停止服务
+nssm stop GoAdminQueue
+
+# 重启服务
+nssm restart GoAdminQueue
+```
+
+### 生产环境最佳实践
+
+1. **配置文件管理**
+   - 使用单独的配置文件（如 `configs/production.yaml`）
+   - 确保敏感信息（如数据库密码）通过环境变量注入
+   - 根据服务器资源调整配置参数
+
+2. **日志管理**
+   - 配置日志输出到文件
+   - 使用日志轮转工具（如 logrotate）管理日志文件
+   - 定期检查日志，及时发现问题
+
+3. **监控告警**
+   - 定期使用 `queue-status.exe` 检查队列状态
+   - 设置队列积压告警阈值
+   - 监控工作进程状态
+   - 配置任务处理失败告警
+
+4. **启动顺序**
+   - 确保依赖服务（Redis/MySQL）已启动
+   - 先启动主应用服务
+   - 然后启动队列工作进程
+
+5. **高可用部署**
+   - 考虑使用多个工作进程
+   - 配置适当的进程数量（建议 CPU 核心数的 1-2 倍）
+   - 使用负载均衡（如需要）
+
+6. **备份策略**
+   - 定期备份队列数据（特别是使用 Database 驱动时）
+   - 保存重要的队列配置
+   - 制定故障恢复方案
+
+7. **性能优化**
+   - 根据服务器资源调整工作进程数量
+   - 配置合适的任务超时时间
+   - 优化任务处理逻辑
+   - 使用批处理减少队列操作
+
+8. **安全建议**
+   - 限制队列管理工具的访问权限
+   - 使用非 root 用户运行服务
+   - 定期更新系统和依赖包
+   - 配置防火墙规则
+
+### 故障排查
+
+1. **队列不处理任务**
+   - 检查工作进程是否运行
+   - 验证配置文件是否正确
+   - 检查数据库/Redis 连接
+   - 查看错误日志
+
+2. **任务积压**
+   - 检查工作进程数量是否足够
+   - 查看任务处理时间是否过长
+   - 检查服务器资源使用情况
+   - 考虑增加工作进程或优化任务
+
+3. **内存使用过高**
+   - 检查 `worker.memory` 配置
+   - 减少并发工作进程数量
+   - 优化任务处理逻辑
+   - 检查是否存在内存泄漏
+
+4. **连接问题**
+   - 检查网络连接
+   - 验证数据库/Redis 服务状态
+   - 检查连接配置
+   - 查看连接池设置
+
+### 常用维护命令
+
+```bash
+# 查看队列状态
+./queue-status.exe -all
+
+# 清空问题队列
+./queue-cmd.exe -clear -queue=problematic_queue
+
+# 重启队列服务
+./queue-cmd.exe -stop
+./queue-cmd.exe -start
+
+# 查看工作进程日志
+tail -f /path/to/queue.log
+
+# 检查系统资源
+top
+htop
+free -m
+```
+
+## 本地开发环境运行
+
+### Windows 环境
+
+1. **直接运行**
+```powershell
+# 启动队列服务
+.\queue-cmd.exe -start
+
+# 查看队列状态
+.\queue-status.exe -all
+
+# 停止队列服务
+.\queue-cmd.exe -stop
+```
+
+2. **使用 PowerShell 后台运行**
+```powershell
+# 启动队列服务到后台
+Start-Process -NoNewWindow .\queue-cmd.exe -ArgumentList "-start"
+
+# 查看后台进程
+Get-Process queue-cmd
+
+# 停止队列服务
+Stop-Process -Name "queue-cmd"
+```
+
+3. **使用 Windows 服务（开发环境）**
+```powershell
+# 安装为 Windows 服务（需要管理员权限）
+nssm install GoAdminQueueDev "C:\path\to\your\app\worker.exe"
+nssm set GoAdminQueueDev AppDirectory "C:\path\to\your\app"
+nssm set GoAdminQueueDev DisplayName "Go Admin Queue Worker (Dev)"
+nssm set GoAdminQueueDev Description "Go Admin Queue Worker Service for Development"
+
+# 启动服务
+nssm start GoAdminQueueDev
+
+# 停止服务
+nssm stop GoAdminQueueDev
+```
+
+### Mac 环境
+
+1. **直接运行**
+```bash
+# 启动队列服务
+./queue-cmd -start
+
+# 查看队列状态
+./queue-status -all
+
+# 停止队列服务
+./queue-cmd -stop
+```
+
+2. **使用后台运行**
+```bash
+# 启动队列服务到后台
+nohup ./queue-cmd -start > queue.log 2>&1 &
+
+# 查看进程
+ps aux | grep queue-cmd
+
+# 停止队列服务
+pkill -f queue-cmd
+```
+
+3. **使用 launchd（开发环境）**
+
+创建服务配置文件 `~/Library/LaunchAgents/com.go-admin.queue.dev.plist`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.go-admin.queue.dev</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/your/app/worker</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/path/to/your/app</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/path/to/your/app/logs/queue-error.log</string>
+    <key>StandardOutPath</key>
+    <string>/path/to/your/app/logs/queue.log</string>
+</dict>
+</plist>
+```
+
+管理服务：
+```bash
+# 加载服务
+launchctl load ~/Library/LaunchAgents/com.go-admin.queue.dev.plist
+
+# 启动服务
+launchctl start com.go-admin.queue.dev
+
+# 停止服务
+launchctl stop com.go-admin.queue.dev
+
+# 卸载服务
+launchctl unload ~/Library/LaunchAgents/com.go-admin.queue.dev.plist
+```
+
+### 开发环境配置
+
+1. **配置文件**
+创建开发环境配置文件 `configs/config.dev.yaml`:
+```yaml
+queue:
+  driver: "redis"  # 或 "database"
+  queue: "default"
+  worker:
+    sleep: 1
+    max_jobs: 0
+    max_time: 0
+    rest: 0
+    memory: 256
+    tries: 3
+    timeout: 30
+  queues:
+    default:
+      priority: 1
+      processes: 2
+      timeout: 30
+      tries: 3
+      retry_after: 60
+      backoff: [30, 60, 120]
+
+# Redis 开发环境配置
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+# 或 MySQL 开发环境配置
+mysql:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "dev_password"
+  database: "go_admin_dev"
+```
+
+2. **启动命令**
+```bash
+# Windows
+.\queue-cmd.exe -start -config=configs/config.dev.yaml
+
+# Mac
+./queue-cmd -start -config=configs/config.dev.yaml
+```
+
+3. **开发环境最佳实践**
+
+- **日志输出**
+  - 开发环境建议将日志输出到控制台
+  - 可以设置更详细的日志级别
+  - 使用 `-v` 参数查看详细日志
+
+- **调试模式**
+  - 使用 `-debug` 参数启动调试模式
+  - 可以查看更详细的处理信息
+  - 方便排查问题
+
+- **快速重启**
+  - 开发时可以使用 `-watch` 参数
+  - 配置文件修改后自动重启
+  - 提高开发效率
+
+- **测试数据**
+  - 使用 `examples/queue/` 目录下的示例
+  - 可以快速测试队列功能
+  - 验证配置是否正确
+
+4. **常用开发命令**
+
+Windows:
+```powershell
+# 启动带调试信息的队列
+.\queue-cmd.exe -start -config=configs/config.dev.yaml -debug
+
+# 查看详细日志
+.\queue-cmd.exe -start -config=configs/config.dev.yaml -v
+
+# 启动并监视配置变化
+.\queue-cmd.exe -start -config=configs/config.dev.yaml -watch
+```
+
+Mac:
+```bash
+# 启动带调试信息的队列
+./queue-cmd -start -config=configs/config.dev.yaml -debug
+
+# 查看详细日志
+./queue-cmd -start -config=configs/config.dev.yaml -v
+
+# 启动并监视配置变化
+./queue-cmd -start -config=configs/config.dev.yaml -watch
+```
+
+5. **开发工具集成**
+
+- **VSCode 任务配置**
+创建 `.vscode/tasks.json`:
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Queue",
+            "type": "shell",
+            "command": "${workspaceFolder}/queue-cmd",
+            "args": ["-start", "-config=configs/config.dev.yaml", "-debug"],
+            "windows": {
+                "command": "${workspaceFolder}/queue-cmd.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Stop Queue",
+            "type": "shell",
+            "command": "${workspaceFolder}/queue-cmd",
+            "args": ["-stop"],
+            "windows": {
+                "command": "${workspaceFolder}/queue-cmd.exe"
+            }
+        }
+    ]
+}
+```
+
+- **JetBrains IDE 运行配置**
+  - 创建新的运行配置
+  - 设置程序路径为 queue-cmd
+  - 添加参数：-start -config=configs/config.dev.yaml -debug
+  - 设置工作目录为项目根目录
+
 ---
 
 如有问题或建议，请提交 Issue 或 Pull Request。 
