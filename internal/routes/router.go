@@ -35,6 +35,13 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		adminV1.POST("/ws/join", middleware.JWT(), wsHandler.JoinGroup)
 		adminV1.POST("/ws/leave", middleware.JWT(), wsHandler.LeaveGroup)
 		adminV1.POST("/ws/send", middleware.JWT(), wsHandler.SendMessage)
+
+		// SSE routes
+		sseHandler := handlers.NewSSEHandler()
+		adminV1.GET("/sse", sseHandler.HandleSSE)
+		adminV1.POST("/sse/notify", middleware.JWT(), sseHandler.SendNotification)
+		adminV1.POST("/sse/join", middleware.JWT(), sseHandler.JoinGroup)
+		adminV1.POST("/sse/leave", middleware.JWT(), sseHandler.LeaveGroup)
 	}
 
 	// Protected Admin API routes
