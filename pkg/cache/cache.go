@@ -3,13 +3,79 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"app/pkg/redis"
 )
 
 var (
 	ErrKeyNotFound = errors.New("key not found in cache")
 	ErrKeyExpired  = errors.New("key has expired")
 )
+
+// Cache interface defines the methods that any cache implementation must provide
+type Cache interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key string, value string, expiration time.Duration) error
+	Delete(ctx context.Context, key string) error
+	Exists(ctx context.Context, key string) (bool, error)
+}
+
+// RedisCache implements Cache interface using Redis
+type RedisCache struct {
+	prefix string
+}
+
+// Config represents cache configuration
+type Config struct {
+	Driver  string                 `mapstructure:"driver"`
+	Prefix  string                 `mapstructure:"prefix"`
+	Options map[string]interface{} `mapstructure:"options"`
+}
+
+var (
+	defaultCache Cache
+)
+
+// Setup initializes the cache system
+func Setup(cfg *Config) error {
+	switch cfg.Driver {
+	case "redis":
+		defaultCache = &RedisCache{
+			prefix: cfg.Prefix,
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported cache driver: %s", cfg.Driver)
+	}
+}
+
+// Default returns the default cache instance
+func Default() Cache {
+	return defaultCache
+}
+
+// Get retrieves a value from Redis cache
+func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
+	return redis.GetClient().Get(ctx, c.prefix+key).Result()
+}
+
+// Set stores a value in Redis cache
+func (c *RedisCache) Set(ctx context.Context, key string, value string, expiration time.Duration) error {
+	return redis.GetClient().Set(ctx, c.prefix+key, value, expiration).Err()
+}
+
+// Delete removes a value from Redis cache
+func (c *RedisCache) Delete(ctx context.Context, key string) error {
+	return redis.GetClient().Del(ctx, c.prefix+key).Err()
+}
+
+// Exists checks if a key exists in Redis cache
+func (c *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
+	result, err := redis.GetClient().Exists(ctx, c.prefix+key).Result()
+	return result > 0, err
+}
 
 // Store defines the interface for cache implementations
 type Store interface {
@@ -39,13 +105,6 @@ type Store interface {
 
 	// Close closes the cache store
 	Close() error
-}
-
-// Config represents cache configuration
-type Config struct {
-	Driver  string                 `yaml:"driver"`  // Cache driver (file/redis)
-	Prefix  string                 `yaml:"prefix"`  // Key prefix
-	Options map[string]interface{} `yaml:"options"` // Driver-specific options
 }
 
 // GetFilePath returns the file path for file cache

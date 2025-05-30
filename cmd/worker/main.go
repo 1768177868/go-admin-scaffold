@@ -101,8 +101,12 @@ func main() {
 
 	// Create queue instance
 	q, err := queue.New(queue.Config{
-		Driver:  cfg.Queue.Driver,
-		Options: cfg.Queue.Options,
+		Driver: cfg.Queue.Driver,
+		Options: map[string]interface{}{
+			"connection": cfg.Queue.Connection,
+			"worker":     cfg.Queue.Worker,
+			"queues":     cfg.Queue.Queues,
+		},
 	})
 	if err != nil {
 		log.Fatalf("Failed to create queue: %v", err)

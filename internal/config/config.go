@@ -13,17 +13,17 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	App     AppConfig     `mapstructure:"app"`
-	JWT     JWTConfig     `mapstructure:"jwt"`
-	MySQL   MySQLConfig   `mapstructure:"mysql"`
-	Redis   RedisConfig   `mapstructure:"redis"`
-	Log     LogConfig     `mapstructure:"log"`
-	Cache   CacheConfig   `mapstructure:"cache"`
-	Queue   QueueConfig   `mapstructure:"queue"`
-	I18n    i18n.Config   `mapstructure:"i18n"`
-	CORS    CORSConfig    `mapstructure:"cors"`
-	Server  ServerConfig  `mapstructure:"server"`
-	Storage StorageConfig `mapstructure:"storage"`
+	App      AppConfig      `mapstructure:"app"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	Log      LogConfig      `mapstructure:"log"`
+	Cache    CacheConfig    `mapstructure:"cache"`
+	Queue    QueueConfig    `mapstructure:"queue"`
+	I18n     i18n.Config    `mapstructure:"i18n"`
+	CORS     CORSConfig     `mapstructure:"cors"`
+	Server   ServerConfig   `mapstructure:"server"`
+	Storage  StorageConfig  `mapstructure:"storage"`
 }
 
 // ServerConfig holds server configuration
@@ -49,13 +49,15 @@ type JWTConfig struct {
 	ExpireTime int    `mapstructure:"expire_time"`
 }
 
-// MySQLConfig holds MySQL database configuration
-type MySQLConfig struct {
+// DatabaseConfig holds database configuration
+type DatabaseConfig struct {
+	Driver          string `mapstructure:"driver"`
 	Host            string `mapstructure:"host"`
-	Port            int    `mapstructure:"port"`
+	Port            string `mapstructure:"port"`
 	Database        string `mapstructure:"database"`
 	Username        string `mapstructure:"username"`
 	Password        string `mapstructure:"password"`
+	Charset         string `mapstructure:"charset"`
 	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	MaxOpenConns    int    `mapstructure:"max_open_conns"`
 	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`
@@ -64,18 +66,20 @@ type MySQLConfig struct {
 // RedisConfig holds Redis configuration
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
+	Port     string `mapstructure:"port"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
 }
 
-// LogConfig holds log configuration
+// LogConfig represents logging configuration
 type LogConfig struct {
-	Level      string `mapstructure:"level"`
-	Filename   string `mapstructure:"filename"`
-	MaxSize    int    `mapstructure:"max_size"`
-	MaxAge     int    `mapstructure:"max_age"`
-	MaxBackups int    `mapstructure:"max_backups"`
+	Level      string `yaml:"level"`       // 日志级别
+	Filename   string `yaml:"filename"`    // 日志文件路径
+	MaxSize    int    `yaml:"max_size"`    // 每个日志文件最大尺寸，单位MB
+	MaxBackups int    `yaml:"max_backups"` // 保留的旧日志文件最大数量
+	MaxAge     int    `yaml:"max_age"`     // 保留的旧日志文件最大天数
+	Compress   bool   `yaml:"compress"`    // 是否压缩旧日志文件
+	Daily      bool   `yaml:"daily"`       // 是否按天切割日志
 }
 
 // CacheConfig holds cache configuration
@@ -87,8 +91,32 @@ type CacheConfig struct {
 
 // QueueConfig holds queue configuration
 type QueueConfig struct {
-	Driver  string                 `mapstructure:"driver"`
-	Options map[string]interface{} `mapstructure:"options"`
+	Driver     string `mapstructure:"driver"`
+	Queue      string `mapstructure:"queue"`
+	Connection struct {
+		Redis    string `mapstructure:"redis"`
+		Database string `mapstructure:"database"`
+	} `mapstructure:"connection"`
+	Worker struct {
+		Sleep   int `mapstructure:"sleep"`
+		MaxJobs int `mapstructure:"max_jobs"`
+		MaxTime int `mapstructure:"max_time"`
+		Rest    int `mapstructure:"rest"`
+		Memory  int `mapstructure:"memory"`
+		Tries   int `mapstructure:"tries"`
+		Timeout int `mapstructure:"timeout"`
+	} `mapstructure:"worker"`
+	Queues map[string]QueueDetail `mapstructure:"queues"`
+}
+
+// QueueDetail holds configuration for individual queues
+type QueueDetail struct {
+	Priority   int   `mapstructure:"priority"`
+	Processes  int   `mapstructure:"processes"`
+	Timeout    int   `mapstructure:"timeout"`
+	Tries      int   `mapstructure:"tries"`
+	RetryAfter int   `mapstructure:"retry_after"`
+	Backoff    []int `mapstructure:"backoff"`
 }
 
 // CORSConfig holds CORS configuration
@@ -141,19 +169,21 @@ func LoadConfig() (*Config, error) {
 	config.JWT.Secret = getEnvOrDefault("JWT_SECRET", viper.GetString("jwt.secret"))
 	config.JWT.ExpireTime = getEnvIntOrDefault("JWT_EXPIRE", viper.GetInt("jwt.expire_time"))
 
-	// MySQL
-	config.MySQL.Host = getEnvOrDefault("DB_HOST", viper.GetString("mysql.host"))
-	config.MySQL.Port = getEnvIntOrDefault("DB_PORT", viper.GetInt("mysql.port"))
-	config.MySQL.Username = getEnvOrDefault("DB_USERNAME", viper.GetString("mysql.username"))
-	config.MySQL.Password = getEnvOrDefault("DB_PASSWORD", viper.GetString("mysql.password"))
-	config.MySQL.Database = getEnvOrDefault("DB_DATABASE", viper.GetString("mysql.database"))
-	config.MySQL.MaxIdleConns = getEnvIntOrDefault("DB_MAX_IDLE_CONNS", viper.GetInt("mysql.max_idle_conns"))
-	config.MySQL.MaxOpenConns = getEnvIntOrDefault("DB_MAX_OPEN_CONNS", viper.GetInt("mysql.max_open_conns"))
-	config.MySQL.ConnMaxLifetime = getEnvIntOrDefault("DB_CONN_MAX_LIFETIME", viper.GetInt("mysql.conn_max_lifetime"))
+	// Database
+	config.Database.Driver = getEnvOrDefault("DB_DRIVER", viper.GetString("database.driver"))
+	config.Database.Host = getEnvOrDefault("DB_HOST", viper.GetString("database.host"))
+	config.Database.Port = getEnvOrDefault("DB_PORT", viper.GetString("database.port"))
+	config.Database.Username = getEnvOrDefault("DB_USERNAME", viper.GetString("database.username"))
+	config.Database.Password = getEnvOrDefault("DB_PASSWORD", viper.GetString("database.password"))
+	config.Database.Database = getEnvOrDefault("DB_DATABASE", viper.GetString("database.database"))
+	config.Database.Charset = getEnvOrDefault("DB_CHARSET", viper.GetString("database.charset"))
+	config.Database.MaxIdleConns = getEnvIntOrDefault("DB_MAX_IDLE_CONNS", viper.GetInt("database.max_idle_conns"))
+	config.Database.MaxOpenConns = getEnvIntOrDefault("DB_MAX_OPEN_CONNS", viper.GetInt("database.max_open_conns"))
+	config.Database.ConnMaxLifetime = getEnvIntOrDefault("DB_CONN_MAX_LIFETIME", viper.GetInt("database.conn_max_lifetime"))
 
 	// Redis
 	config.Redis.Host = getEnvOrDefault("REDIS_HOST", viper.GetString("redis.host"))
-	config.Redis.Port = getEnvIntOrDefault("REDIS_PORT", viper.GetInt("redis.port"))
+	config.Redis.Port = getEnvOrDefault("REDIS_PORT", viper.GetString("redis.port"))
 	config.Redis.Password = getEnvOrDefault("REDIS_PASSWORD", viper.GetString("redis.password"))
 	config.Redis.DB = getEnvIntOrDefault("REDIS_DB", viper.GetInt("redis.db"))
 
@@ -164,7 +194,31 @@ func LoadConfig() (*Config, error) {
 
 	// Queue
 	config.Queue.Driver = getEnvOrDefault("QUEUE_DRIVER", viper.GetString("queue.driver"))
-	config.Queue.Options = viper.GetStringMap("queue.options")
+	config.Queue.Queue = getEnvOrDefault("QUEUE_NAME", viper.GetString("queue.queue"))
+
+	// Queue connection
+	config.Queue.Connection.Redis = viper.GetString("queue.connection.redis")
+	config.Queue.Connection.Database = viper.GetString("queue.connection.database")
+
+	// Queue worker
+	config.Queue.Worker.Sleep = viper.GetInt("queue.worker.sleep")
+	config.Queue.Worker.MaxJobs = viper.GetInt("queue.worker.max_jobs")
+	config.Queue.Worker.MaxTime = viper.GetInt("queue.worker.max_time")
+	config.Queue.Worker.Rest = viper.GetInt("queue.worker.rest")
+	config.Queue.Worker.Memory = viper.GetInt("queue.worker.memory")
+	config.Queue.Worker.Tries = viper.GetInt("queue.worker.tries")
+	config.Queue.Worker.Timeout = viper.GetInt("queue.worker.timeout")
+
+	// Queue details
+	config.Queue.Queues = make(map[string]QueueDetail)
+	queues := viper.GetStringMap("queue.queues")
+	for name := range queues {
+		var detail QueueDetail
+		if err := viper.UnmarshalKey("queue.queues."+name, &detail); err != nil {
+			return nil, fmt.Errorf("error unmarshaling queue %s: %v", name, err)
+		}
+		config.Queue.Queues[name] = detail
+	}
 
 	// Server
 	config.Server.Address = getEnvOrDefault("SERVER_ADDRESS", viper.GetString("server.address"))
@@ -176,6 +230,8 @@ func LoadConfig() (*Config, error) {
 	config.Log.MaxSize = getEnvIntOrDefault("LOG_MAX_SIZE", viper.GetInt("log.maxSize"))
 	config.Log.MaxBackups = getEnvIntOrDefault("LOG_MAX_BACKUPS", viper.GetInt("log.maxBackups"))
 	config.Log.MaxAge = getEnvIntOrDefault("LOG_MAX_AGE", viper.GetInt("log.maxAge"))
+	config.Log.Compress = getEnvBoolOrDefault("LOG_COMPRESS", viper.GetBool("log.compress"))
+	config.Log.Daily = getEnvBoolOrDefault("LOG_DAILY", viper.GetBool("log.daily"))
 
 	// CORS
 	config.CORS.AllowOrigins = viper.GetStringSlice("cors.allow_origins")

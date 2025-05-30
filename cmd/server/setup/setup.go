@@ -35,12 +35,24 @@ func InitializeApp() (*App, error) {
 		MaxSize:    cfg.Log.MaxSize,
 		MaxAge:     cfg.Log.MaxAge,
 		MaxBackups: cfg.Log.MaxBackups,
+		Compress:   cfg.Log.Compress,
+		Daily:      cfg.Log.Daily,
 	}); err != nil {
 		return nil, err
 	}
 
 	// Initialize database
 	if err := bootstrap.SetupDatabase(cfg); err != nil {
+		return nil, err
+	}
+
+	// Initialize Redis
+	if err := bootstrap.SetupRedis(cfg); err != nil {
+		return nil, err
+	}
+
+	// Initialize Cache
+	if err := bootstrap.SetupCache(cfg); err != nil {
 		return nil, err
 	}
 
@@ -58,6 +70,9 @@ func InitializeApp() (*App, error) {
 
 	// Use CORS middleware
 	engine.Use(middleware.CORS(&cfg.CORS))
+
+	// Use trace middleware
+	engine.Use(middleware.Trace())
 
 	// Setup routes
 	routes.SetupRoutes(engine, cfg)
