@@ -131,8 +131,24 @@ type CORSConfig struct {
 
 // StorageConfig holds storage configuration
 type StorageConfig struct {
-	Driver  string                 `mapstructure:"driver"`
-	Options map[string]interface{} `mapstructure:"options"`
+	Driver string      `mapstructure:"driver"`
+	Local  LocalConfig `mapstructure:"local"`
+	S3     S3Config    `mapstructure:"s3"`
+}
+
+// LocalConfig holds local storage configuration
+type LocalConfig struct {
+	Path string `mapstructure:"path"`
+}
+
+// S3Config holds S3 storage configuration
+type S3Config struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+	Bucket          string `mapstructure:"bucket"`
+	Region          string `mapstructure:"region"`
+	UseSSL          bool   `mapstructure:"use_ssl"`
 }
 
 // Load loads configuration from environment variables and config files
@@ -248,7 +264,17 @@ func LoadConfig() (*Config, error) {
 
 	// Storage
 	config.Storage.Driver = getEnvOrDefault("STORAGE_DRIVER", viper.GetString("storage.driver"))
-	config.Storage.Options = viper.GetStringMap("storage.options")
+
+	// Local storage
+	config.Storage.Local.Path = getEnvOrDefault("STORAGE_LOCAL_PATH", viper.GetString("storage.local.path"))
+
+	// S3 storage
+	config.Storage.S3.Endpoint = getEnvOrDefault("STORAGE_S3_ENDPOINT", viper.GetString("storage.s3.endpoint"))
+	config.Storage.S3.AccessKeyID = getEnvOrDefault("STORAGE_S3_ACCESS_KEY_ID", viper.GetString("storage.s3.access_key_id"))
+	config.Storage.S3.SecretAccessKey = getEnvOrDefault("STORAGE_S3_SECRET_ACCESS_KEY", viper.GetString("storage.s3.secret_access_key"))
+	config.Storage.S3.Bucket = getEnvOrDefault("STORAGE_S3_BUCKET", viper.GetString("storage.s3.bucket"))
+	config.Storage.S3.Region = getEnvOrDefault("STORAGE_S3_REGION", viper.GetString("storage.s3.region"))
+	config.Storage.S3.UseSSL = getEnvBoolOrDefault("STORAGE_S3_USE_SSL", viper.GetBool("storage.s3.use_ssl"))
 
 	return config, nil
 }

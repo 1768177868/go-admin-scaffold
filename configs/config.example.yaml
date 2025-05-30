@@ -126,11 +126,12 @@ i18n:
 
 storage:
   driver: "local"  # local, s3
-  options:
-    local:
-      path: "storage/uploads"
-    s3:
-      region: "us-west-2"
-      bucket: "your-bucket"
-      access_key: ""
-      secret_key: "" 
+  local:
+    path: "storage/uploads"  # 本地存储路径
+  s3:
+    endpoint: "https://s3.amazonaws.com"  # S3 端点
+    access_key_id: ""  # S3 访问密钥 ID
+    secret_access_key: ""  # S3 访问密钥
+    bucket: "your-bucket"  # S3 存储桶
+    region: "us-west-2"  # S3 区域
+    use_ssl: true  # 是否使用 SSL 

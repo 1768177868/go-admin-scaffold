@@ -6,6 +6,7 @@ import (
 	adminv1 "app/internal/api/admin/v1"
 	openv1 "app/internal/api/open/v1"
 	"app/internal/config"
+	"app/internal/core/storage"
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -125,6 +126,35 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		{
 			profile.GET("", middleware.RBAC("profile:view"), wrapHandler(adminv1.GetCurrentUser))
 			profile.PUT("", middleware.RBAC("profile:edit"), wrapHandler(adminv1.UpdateCurrentUser))
+		}
+
+		// 创建存储实例
+		storageCfg := &storage.Config{
+			Driver:    cfg.Storage.Driver,
+			LocalPath: cfg.Storage.Local.Path,
+			S3Config: &storage.S3Config{
+				Endpoint:        cfg.Storage.S3.Endpoint,
+				AccessKeyID:     cfg.Storage.S3.AccessKeyID,
+				SecretAccessKey: cfg.Storage.S3.SecretAccessKey,
+				Bucket:          cfg.Storage.S3.Bucket,
+				Region:          cfg.Storage.S3.Region,
+				UseSSL:          cfg.Storage.S3.UseSSL,
+			},
+		}
+
+		storage, err := storage.NewStorage(storageCfg)
+		if err != nil {
+			panic(err)
+		}
+
+		// 创建上传处理器
+		uploadHandler := handlers.NewUploadHandler(storage)
+
+		// 上传相关路由
+		upload := adminV1Protected.Group("/upload")
+		upload.Use(middleware.RBAC("upload:create"))
+		{
+			upload.POST("/file", wrapHandler(uploadHandler.Upload)) // 上传文件
 		}
 	}
 
