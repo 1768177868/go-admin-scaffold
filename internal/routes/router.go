@@ -150,13 +150,14 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		}
 
 		// 创建上传处理器
-		uploadHandler := handlers.NewUploadHandler(storage)
+		uploadHandler := corehandlers.NewUploadHandler(storage)
 
 		// 上传相关路由
 		upload := adminV1Protected.Group("/upload")
 		upload.Use(middleware.RBAC("upload:create"))
 		{
-			upload.POST("/file", wrapHandler(uploadHandler.Upload)) // 上传文件
+			upload.POST("/file", wrapHandler(uploadHandler.Upload))       // 单文件上传
+			upload.POST("/files", wrapHandler(uploadHandler.MultiUpload)) // 多文件上传
 		}
 	}
 
