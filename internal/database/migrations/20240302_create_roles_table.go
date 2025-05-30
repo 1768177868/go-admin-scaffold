@@ -10,15 +10,15 @@ func init() {
 	Register("20240302_create_roles_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type Role struct {
-				ID          uint     `gorm:"primarykey"`
-				Name        string   `gorm:"size:50;not null"`
-				Code        string   `gorm:"size:50;not null;unique"`
-				Description string   `gorm:"size:255"`
-				Status      int      `gorm:"default:1;comment:'Status: 0-inactive, 1-active'"`
-				PermList    []string `gorm:"type:json"`
-				CreatedAt   time.Time
-				UpdatedAt   time.Time
-				DeletedAt   gorm.DeletedAt `gorm:"index"`
+				ID          uint           `gorm:"primarykey"`
+				Name        string         `gorm:"size:50;not null"`
+				Code        string         `gorm:"size:50;not null;unique"`
+				Description string         `gorm:"size:255"`
+				Status      int            `gorm:"default:1;comment:'Status: 0-inactive, 1-active'"`
+				PermList    []string       `gorm:"type:json"`
+				CreatedAt   time.Time      `gorm:"type:timestamp"`
+				UpdatedAt   time.Time      `gorm:"type:timestamp"`
+				DeletedAt   gorm.DeletedAt `gorm:"index;type:timestamp"`
 			}
 
 			// Create roles table

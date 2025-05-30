@@ -17,9 +17,9 @@ type User struct {
 	Avatar    string         `json:"avatar" gorm:"size:255"`
 	Status    int            `json:"status" gorm:"default:1"`
 	Roles     []Role         `json:"roles" gorm:"many2many:user_roles"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+	CreatedAt time.Time      `json:"created_at" gorm:"type:timestamp"`
+	UpdatedAt time.Time      `json:"updated_at" gorm:"type:timestamp"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index;type:timestamp"`
 }
 
 // TableName specifies the table name for User model

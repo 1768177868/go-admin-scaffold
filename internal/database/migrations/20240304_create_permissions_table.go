@@ -10,17 +10,17 @@ func init() {
 	Register("20240304_create_permissions_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type Permission struct {
-				ID          uint   `gorm:"primarykey"`
-				Name        string `gorm:"size:100;not null;unique;comment:'权限名称，如user:create'"`
-				DisplayName string `gorm:"size:100;not null;comment:'权限显示名称'"`
-				Description string `gorm:"size:255;comment:'权限描述'"`
-				Module      string `gorm:"size:50;not null;comment:'所属模块'"`
-				Action      string `gorm:"size:50;not null;comment:'操作类型：view,create,edit,delete'"`
-				Resource    string `gorm:"size:50;not null;comment:'资源类型：user,role,permission等'"`
-				Status      int    `gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
-				CreatedAt   time.Time
-				UpdatedAt   time.Time
-				DeletedAt   gorm.DeletedAt `gorm:"index"`
+				ID          uint           `gorm:"primarykey"`
+				Name        string         `gorm:"size:100;not null;unique;comment:'权限名称，如user:create'"`
+				DisplayName string         `gorm:"size:100;not null;comment:'权限显示名称'"`
+				Description string         `gorm:"size:255;comment:'权限描述'"`
+				Module      string         `gorm:"size:50;not null;comment:'所属模块'"`
+				Action      string         `gorm:"size:50;not null;comment:'操作类型：view,create,edit,delete'"`
+				Resource    string         `gorm:"size:50;not null;comment:'资源类型：user,role,permission等'"`
+				Status      int            `gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
+				CreatedAt   time.Time      `gorm:"type:timestamp"`
+				UpdatedAt   time.Time      `gorm:"type:timestamp"`
+				DeletedAt   gorm.DeletedAt `gorm:"index;type:timestamp"`
 			}
 
 			// Create permissions table

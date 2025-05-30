@@ -12,16 +12,16 @@ import (
 
 // MySQLJob represents a job in the MySQL database
 type MySQLJob struct {
-	ID        string `gorm:"primaryKey;type:varchar(36)"`
-	Queue     string `gorm:"type:varchar(100);index"`
-	Payload   string `gorm:"type:text"`
-	Attempts  int    `gorm:"default:0"`
-	MaxRetry  int    `gorm:"default:3"`
-	Status    string `gorm:"type:varchar(20);index"`
-	Error     string `gorm:"type:text"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	ID        string         `gorm:"primaryKey;type:varchar(36)"`
+	Queue     string         `gorm:"type:varchar(100);index"`
+	Payload   string         `gorm:"type:text"`
+	Attempts  int            `gorm:"default:0"`
+	MaxRetry  int            `gorm:"default:3"`
+	Status    string         `gorm:"type:varchar(20);index"`
+	Error     string         `gorm:"type:text"`
+	CreatedAt time.Time      `gorm:"type:timestamp"`
+	UpdatedAt time.Time      `gorm:"type:timestamp"`
+	DeletedAt gorm.DeletedAt `gorm:"index;type:timestamp"`
 }
 
 // TableName returns the table name for the job

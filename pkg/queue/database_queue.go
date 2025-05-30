@@ -17,19 +17,20 @@ type DatabaseQueue struct {
 
 // QueueJob 数据库队列任务表结构
 type QueueJob struct {
-	ID          uint64     `gorm:"primaryKey"`
-	Queue       string     `gorm:"index;not null"`
-	Payload     []byte     `gorm:"type:json;not null"`
-	Attempts    int        `gorm:"default:0;not null"`
-	MaxAttempts int        `gorm:"default:3;not null"`
-	Delay       int64      `gorm:"default:0;not null"`
-	Timeout     int64      `gorm:"default:60;not null"`
-	RetryAfter  int64      `gorm:"default:60;not null"`
-	Backoff     []byte     `gorm:"type:json"`
-	CreatedAt   time.Time  `gorm:"not null"`
-	UpdatedAt   time.Time  `gorm:"not null"`
-	ReservedAt  *time.Time `gorm:"index"`
-	AvailableAt time.Time  `gorm:"index;not null"`
+	ID          uint64         `gorm:"primaryKey"`
+	Queue       string         `gorm:"index;not null"`
+	Payload     []byte         `gorm:"type:json;not null"`
+	Attempts    int            `gorm:"default:0;not null"`
+	MaxAttempts int            `gorm:"default:3;not null"`
+	Delay       int64          `gorm:"default:0;not null"`
+	Timeout     int64          `gorm:"default:60;not null"`
+	RetryAfter  int64          `gorm:"default:60;not null"`
+	Backoff     []byte         `gorm:"type:json"`
+	CreatedAt   time.Time      `gorm:"type:timestamp;not null"`
+	UpdatedAt   time.Time      `gorm:"type:timestamp;not null"`
+	ReservedAt  *time.Time     `gorm:"type:timestamp;index"`
+	AvailableAt time.Time      `gorm:"type:timestamp;index;not null"`
+	DeletedAt   gorm.DeletedAt `gorm:"index;type:timestamp"`
 }
 
 // TableName 指定表名

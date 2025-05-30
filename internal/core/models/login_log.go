@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"gorm.io/gorm"
 )
 
@@ -15,10 +13,10 @@ type LoginLog struct {
 	UserAgent string         `gorm:"size:255" json:"user_agent"`
 	Status    int            `gorm:"default:1" json:"status"`
 	Message   string         `gorm:"size:255" json:"message"`
-	LoginTime time.Time      `gorm:"not null" json:"login_time"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	LoginTime CustomTime     `gorm:"type:timestamp;not null" json:"login_time"`
+	CreatedAt CustomTime     `gorm:"type:timestamp" json:"created_at"`
+	UpdatedAt CustomTime     `gorm:"type:timestamp" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index;type:timestamp" json:"-"`
 }
 
 // TableName returns the table name

@@ -15,9 +15,9 @@ type Permission struct {
 	Action      string         `json:"action" gorm:"size:50;not null;comment:'操作类型：view,create,edit,delete'"`
 	Resource    string         `json:"resource" gorm:"size:50;not null;comment:'资源类型：user,role,permission等'"`
 	Status      int            `json:"status" gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	CreatedAt   time.Time      `json:"created_at" gorm:"type:timestamp"`
+	UpdatedAt   time.Time      `json:"updated_at" gorm:"type:timestamp"`
+	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index;type:timestamp"`
 	Roles       []Role         `json:"roles,omitempty" gorm:"many2many:role_permissions;"`
 }
 

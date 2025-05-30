@@ -74,8 +74,9 @@ func OperationLog() gin.HandlerFunc {
 			Module:        getModuleFromPath(c.Request.URL.Path),
 			RequestParams: string(requestBody),
 			Status:        1, // Default to success
-			OperationTime: time.Now(),
+			OperationTime: models.CustomTime(time.Now()),
 			Duration:      duration,
+			UserAgent:     c.Request.UserAgent(),
 		}
 
 		// Update status and error message if there was an error

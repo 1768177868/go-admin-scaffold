@@ -10,18 +10,18 @@ func init() {
 	Register("create_users_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type User struct {
-				ID          uint       `gorm:"primarykey"`
-				Username    string     `gorm:"size:50;not null;unique;comment:'用户名'"`
-				Password    string     `gorm:"size:255;not null;comment:'密码'"`
-				Email       string     `gorm:"size:100;not null;unique;comment:'邮箱'"`
-				Nickname    string     `gorm:"size:50;comment:'昵称'"`
-				Avatar      string     `gorm:"size:255;comment:'头像'"`
-				Status      int        `gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
-				LastLoginAt *time.Time `gorm:"comment:'最后登录时间'"`
-				LastLoginIP string     `gorm:"size:50;comment:'最后登录IP'"`
-				CreatedAt   time.Time
-				UpdatedAt   time.Time
-				DeletedAt   gorm.DeletedAt `gorm:"index"`
+				ID          uint           `gorm:"primarykey"`
+				Username    string         `gorm:"size:50;not null;unique;comment:'用户名'"`
+				Password    string         `gorm:"size:255;not null;comment:'密码'"`
+				Email       string         `gorm:"size:100;not null;unique;comment:'邮箱'"`
+				Nickname    string         `gorm:"size:50;comment:'昵称'"`
+				Avatar      string         `gorm:"size:255;comment:'头像'"`
+				Status      int            `gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
+				LastLoginAt *time.Time     `gorm:"type:timestamp;comment:'最后登录时间'"`
+				LastLoginIP string         `gorm:"size:50;comment:'最后登录IP'"`
+				CreatedAt   time.Time      `gorm:"type:timestamp"`
+				UpdatedAt   time.Time      `gorm:"type:timestamp"`
+				DeletedAt   gorm.DeletedAt `gorm:"index;type:timestamp"`
 			}
 
 			// Create users table

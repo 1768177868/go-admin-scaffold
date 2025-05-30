@@ -27,14 +27,14 @@ func (s *LogService) RecordLoginLog(ctx context.Context, userID uint, username, 
 		UserAgent: userAgent,
 		Status:    status,
 		Message:   message,
-		LoginTime: time.Now(),
+		LoginTime: models.CustomTime(time.Now()),
 	}
 	return s.logRepo.CreateLoginLog(ctx, log)
 }
 
 // RecordOperationLog records a user operation
 func (s *LogService) RecordOperationLog(ctx context.Context, log *models.OperationLog) error {
-	log.OperationTime = time.Now()
+	log.OperationTime = models.CustomTime(time.Now())
 	return s.logRepo.CreateOperationLog(ctx, log)
 }
 
