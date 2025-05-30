@@ -6,6 +6,8 @@ import (
 	adminv1 "app/internal/api/admin/v1"
 	openv1 "app/internal/api/open/v1"
 	"app/internal/config"
+	corehandlers "app/internal/core/handlers"
+	coremiddleware "app/internal/core/middleware"
 	"app/internal/core/storage"
 	"app/pkg/response"
 
@@ -173,6 +175,16 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			oauth.GET("/github", wrapHandler(openv1.GithubOAuth))
 			oauth.GET("/github/callback", wrapHandler(openv1.GithubOAuthCallback))
 		}
+	}
+
+	// 测试路由组
+	test := r.Group("/api/test")
+	{
+		testHandler := corehandlers.NewTestHandler()
+		// 添加限流中间件：每10秒2个请求 (rate=0.2, burst=2)
+		test.GET("/ratelimit", coremiddleware.RateLimit(0.2, 2), testHandler.RateLimitTest)
+		// 添加限流中间件：每5秒10个突发请求 (rate=5, burst=10)
+		test.GET("/ratelimit2", coremiddleware.RateLimit(5, 10), testHandler.RateLimitTest)
 	}
 }
 
