@@ -8,44 +8,53 @@ import (
 )
 
 func init() {
-	Register("20240310_create_logs_tables", &MigrationDefinition{
+	Register("create_logs_tables", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			// Login logs table
 			type LoginLog struct {
 				ID        uint      `gorm:"primarykey"`
-				UserID    uint      `gorm:"index"`
-				Username  string    `gorm:"size:50"`
-				IP        string    `gorm:"size:50"`
-				UserAgent string    `gorm:"size:255"`
-				Status    int       `gorm:"default:1;comment:'Status: 0-failed, 1-success'"`
-				Message   string    `gorm:"size:255"`
-				LoginTime time.Time `gorm:"not null"`
+				UserID    uint      `gorm:"index;comment:'用户ID'"`
+				Username  string    `gorm:"size:50;comment:'用户名'"`
+				IP        string    `gorm:"size:50;comment:'登录IP'"`
+				UserAgent string    `gorm:"size:255;comment:'用户代理'"`
+				Status    int       `gorm:"default:1;comment:'状态：0-失败，1-成功'"`
+				Message   string    `gorm:"size:255;comment:'消息'"`
+				LoginTime time.Time `gorm:"not null;comment:'登录时间'"`
+				CreatedAt time.Time
+				UpdatedAt time.Time
+				DeletedAt gorm.DeletedAt `gorm:"index"`
 			}
 
 			// Operation logs table
 			type OperationLog struct {
 				ID            uint      `gorm:"primarykey"`
-				UserID        uint      `gorm:"index"`
-				Username      string    `gorm:"size:50"`
-				IP            string    `gorm:"size:50"`
-				Method        string    `gorm:"size:20"`
-				Path          string    `gorm:"size:255"`
-				Action        string    `gorm:"size:100"`
-				Module        string    `gorm:"size:100"`
-				BusinessID    string    `gorm:"size:100"`
-				BusinessType  string    `gorm:"size:100"`
-				RequestParams string    `gorm:"type:text"`
-				Status        int       `gorm:"default:1;comment:'Status: 0-failed, 1-success'"`
-				ErrorMessage  string    `gorm:"size:255"`
-				Duration      int64     `gorm:"comment:'Duration in milliseconds'"`
-				OperationTime time.Time `gorm:"not null"`
+				UserID        uint      `gorm:"index;comment:'用户ID'"`
+				Username      string    `gorm:"size:50;comment:'用户名'"`
+				IP            string    `gorm:"size:50;comment:'操作IP'"`
+				Method        string    `gorm:"size:20;comment:'请求方法'"`
+				Path          string    `gorm:"size:255;comment:'请求路径'"`
+				Action        string    `gorm:"size:100;comment:'操作类型'"`
+				Module        string    `gorm:"size:100;comment:'模块名称'"`
+				BusinessID    string    `gorm:"size:100;comment:'业务ID'"`
+				BusinessType  string    `gorm:"size:100;comment:'业务类型'"`
+				RequestParams string    `gorm:"type:text;comment:'请求参数'"`
+				Status        int       `gorm:"default:1;comment:'状态：0-失败，1-成功'"`
+				ErrorMessage  string    `gorm:"size:255;comment:'错误信息'"`
+				Duration      int64     `gorm:"comment:'执行时长(毫秒)'"`
+				OperationTime time.Time `gorm:"not null;comment:'操作时间'"`
+				UserAgent     string    `gorm:"size:255;comment:'用户代理'"`
+				ReqBody       string    `gorm:"type:text;comment:'请求体'"`
+				RespBody      string    `gorm:"type:text;comment:'响应体'"`
+				CreatedAt     time.Time
+				UpdatedAt     time.Time
+				DeletedAt     gorm.DeletedAt `gorm:"index"`
 			}
 
-			// Create tables
-			if err := tx.AutoMigrate(&LoginLog{}); err != nil {
+			// Set table names and create tables
+			if err := tx.Set("gorm:table_options", "").Table("login_logs").AutoMigrate(&LoginLog{}); err != nil {
 				return err
 			}
-			if err := tx.AutoMigrate(&OperationLog{}); err != nil {
+			if err := tx.Set("gorm:table_options", "").Table("operation_logs").AutoMigrate(&OperationLog{}); err != nil {
 				return err
 			}
 
@@ -68,6 +77,14 @@ func init() {
 				}
 			}
 
+			// Check and create idx_login_logs_user_id
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'login_logs' AND index_name = 'idx_login_logs_user_id'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_login_logs_user_id ON login_logs(user_id)").Error; err != nil {
+					return err
+				}
+			}
+
 			// Add indexes for operation_logs (check if they exist first)
 			indexQueries := []struct {
 				name  string
@@ -77,6 +94,8 @@ func init() {
 				{"idx_operation_logs_module", "CREATE INDEX idx_operation_logs_module ON operation_logs(module)"},
 				{"idx_operation_logs_action", "CREATE INDEX idx_operation_logs_action ON operation_logs(action)"},
 				{"idx_operation_logs_status", "CREATE INDEX idx_operation_logs_status ON operation_logs(status)"},
+				{"idx_operation_logs_user_id", "CREATE INDEX idx_operation_logs_user_id ON operation_logs(user_id)"},
+				{"idx_operation_logs_business_type", "CREATE INDEX idx_operation_logs_business_type ON operation_logs(business_type)"},
 			}
 
 			for _, idx := range indexQueries {
@@ -95,10 +114,13 @@ func init() {
 			indexes := []string{
 				"idx_login_logs_login_time",
 				"idx_login_logs_status",
+				"idx_login_logs_user_id",
 				"idx_operation_logs_operation_time",
 				"idx_operation_logs_module",
 				"idx_operation_logs_action",
 				"idx_operation_logs_status",
+				"idx_operation_logs_user_id",
+				"idx_operation_logs_business_type",
 			}
 
 			for _, idx := range indexes {

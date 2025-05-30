@@ -7,8 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Migration represents a database migration
-type Migration struct {
+// MigrationRecord represents a database migration record
+type MigrationRecord struct {
 	ID        uint      `gorm:"primarykey"`
 	Name      string    `gorm:"size:255;not null;unique"`
 	Batch     int       `gorm:"not null"`
@@ -24,34 +24,43 @@ type MigrationDefinition struct {
 	Down MigrationFunc
 }
 
+// RegisteredMigration represents a registered migration
+type RegisteredMigration struct {
+	Name       string
+	Definition *MigrationDefinition
+}
+
 // Migrator handles database migrations
 type Migrator struct {
 	db         *gorm.DB
-	migrations map[string]*MigrationDefinition
+	migrations []RegisteredMigration
 }
 
 // NewMigrator creates a new migrator instance
 func NewMigrator(db *gorm.DB) *Migrator {
 	return &Migrator{
 		db:         db,
-		migrations: make(map[string]*MigrationDefinition),
+		migrations: make([]RegisteredMigration, 0),
 	}
 }
 
 // Register registers a new migration
 func (m *Migrator) Register(name string, migration *MigrationDefinition) {
-	m.migrations[name] = migration
+	m.migrations = append(m.migrations, RegisteredMigration{
+		Name:       name,
+		Definition: migration,
+	})
 }
 
 // CreateMigrationsTable creates the migrations table if it doesn't exist
 func (m *Migrator) CreateMigrationsTable() error {
-	return m.db.AutoMigrate(&Migration{})
+	return m.db.AutoMigrate(&MigrationRecord{})
 }
 
 // GetLastBatch gets the last batch number
 func (m *Migrator) GetLastBatch() (int, error) {
 	var lastBatch int
-	err := m.db.Model(&Migration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch).Error
+	err := m.db.Model(&MigrationRecord{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch).Error
 	return lastBatch, err
 }
 
@@ -63,7 +72,7 @@ func (m *Migrator) RunPending() error {
 	}
 
 	// Get executed migrations
-	var executed []Migration
+	var executed []MigrationRecord
 	if err := m.db.Find(&executed).Error; err != nil {
 		return err
 	}
@@ -80,29 +89,29 @@ func (m *Migrator) RunPending() error {
 		executedNames[migration.Name] = true
 	}
 
-	// Run pending migrations
-	for name, migration := range m.migrations {
-		if !executedNames[name] {
+	// Run pending migrations in registration order
+	for _, migration := range m.migrations {
+		if !executedNames[migration.Name] {
 			// Begin transaction
 			err := m.db.Transaction(func(tx *gorm.DB) error {
 				// Run migration
-				if err := migration.Up(tx); err != nil {
+				if err := migration.Definition.Up(tx); err != nil {
 					return err
 				}
 
 				// Record migration
-				return tx.Create(&Migration{
-					Name:      name,
+				return tx.Create(&MigrationRecord{
+					Name:      migration.Name,
 					Batch:     lastBatch + 1,
 					CreatedAt: time.Now(),
 				}).Error
 			})
 
 			if err != nil {
-				return fmt.Errorf("failed to run migration %s: %w", name, err)
+				return fmt.Errorf("failed to run migration %s: %w", migration.Name, err)
 			}
 
-			fmt.Printf("Migrated: %s\n", name)
+			fmt.Printf("Migrated: %s\n", migration.Name)
 		}
 	}
 
@@ -116,13 +125,22 @@ func (m *Migrator) Rollback() error {
 		return err
 	}
 
-	var migrations []Migration
+	var migrations []MigrationRecord
 	if err := m.db.Where("batch = ?", lastBatch).Order("id DESC").Find(&migrations).Error; err != nil {
 		return err
 	}
 
 	for _, migration := range migrations {
-		if def, ok := m.migrations[migration.Name]; ok {
+		// Find the migration definition
+		var def *MigrationDefinition
+		for _, m := range m.migrations {
+			if m.Name == migration.Name {
+				def = m.Definition
+				break
+			}
+		}
+
+		if def != nil {
 			err := m.db.Transaction(func(tx *gorm.DB) error {
 				// Run down migration
 				if err := def.Down(tx); err != nil {
@@ -146,13 +164,22 @@ func (m *Migrator) Rollback() error {
 
 // Reset rolls back all migrations
 func (m *Migrator) Reset() error {
-	var migrations []Migration
+	var migrations []MigrationRecord
 	if err := m.db.Order("id DESC").Find(&migrations).Error; err != nil {
 		return err
 	}
 
 	for _, migration := range migrations {
-		if def, ok := m.migrations[migration.Name]; ok {
+		// Find the migration definition
+		var def *MigrationDefinition
+		for _, m := range m.migrations {
+			if m.Name == migration.Name {
+				def = m.Definition
+				break
+			}
+		}
+
+		if def != nil {
 			err := m.db.Transaction(func(tx *gorm.DB) error {
 				if err := def.Down(tx); err != nil {
 					return err
@@ -181,28 +208,28 @@ func (m *Migrator) Refresh() error {
 
 // Status returns the status of all migrations
 func (m *Migrator) Status() ([]map[string]interface{}, error) {
-	var executed []Migration
+	var executed []MigrationRecord
 	if err := m.db.Find(&executed).Error; err != nil {
 		return nil, err
 	}
 
-	executedMap := make(map[string]Migration)
+	executedMap := make(map[string]MigrationRecord)
 	for _, migration := range executed {
 		executedMap[migration.Name] = migration
 	}
 
 	var status []map[string]interface{}
-	for name := range m.migrations {
-		if migration, ok := executedMap[name]; ok {
+	for _, migration := range m.migrations {
+		if record, ok := executedMap[migration.Name]; ok {
 			status = append(status, map[string]interface{}{
-				"name":       name,
-				"batch":      migration.Batch,
-				"created_at": migration.CreatedAt,
+				"name":       migration.Name,
+				"batch":      record.Batch,
+				"created_at": record.CreatedAt,
 				"status":     "Executed",
 			})
 		} else {
 			status = append(status, map[string]interface{}{
-				"name":       name,
+				"name":       migration.Name,
 				"batch":      0,
 				"created_at": nil,
 				"status":     "Pending",

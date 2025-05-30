@@ -1,37 +1,47 @@
 package migrations
 
 import (
-	"sort"
+	"fmt"
 
 	"gorm.io/gorm"
 )
 
-var migrations = make(map[string]*MigrationDefinition)
+// Migration represents a registered migration
+type Migration struct {
+	Name       string
+	Definition *MigrationDefinition
+}
+
+// 使用切片替代map，保持注册顺序
+var migrations []Migration
 
 // Register registers a migration
 func Register(name string, migration *MigrationDefinition) {
-	migrations[name] = migration
+	// 检查是否已存在同名迁移
+	for _, m := range migrations {
+		if m.Name == name {
+			panic(fmt.Sprintf("migration %s already exists", name))
+		}
+	}
+
+	migrations = append(migrations, Migration{
+		Name:       name,
+		Definition: migration,
+	})
 }
 
-// GetMigrations returns all registered migrations
-func GetMigrations() map[string]*MigrationDefinition {
+// GetMigrations returns all registered migrations in registration order
+func GetMigrations() []Migration {
 	return migrations
 }
 
-// InitMigrations initializes all migrations in correct order
+// InitMigrations initializes all migrations in registration order
 func InitMigrations(db *gorm.DB) *Migrator {
 	migrator := NewMigrator(db)
 
-	// Get sorted migration names
-	var names []string
-	for name := range migrations {
-		names = append(names, name)
-	}
-	sort.Strings(names) // This ensures chronological order due to timestamp prefix
-
-	// Register migrations in sorted order
-	for _, name := range names {
-		migrator.Register(name, migrations[name])
+	// 直接按注册顺序执行迁移
+	for _, migration := range migrations {
+		migrator.Register(migration.Name, migration.Definition)
 	}
 
 	return migrator

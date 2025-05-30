@@ -7,20 +7,21 @@ import (
 )
 
 func init() {
-	Register("20240301_create_users_table", &MigrationDefinition{
+	Register("create_users_table", &MigrationDefinition{
 		Up: func(tx *gorm.DB) error {
 			type User struct {
-				ID        uint   `gorm:"primarykey"`
-				Username  string `gorm:"size:50;not null;unique"`
-				Password  string `gorm:"size:255;not null"`
-				Email     string `gorm:"size:100;not null;unique"`
-				Nickname  string `gorm:"size:50"`
-				Avatar    string `gorm:"size:255"`
-				Status    int    `gorm:"default:1;comment:'Status: 0-inactive, 1-active'"`
-				LastLogin *time.Time
-				CreatedAt time.Time
-				UpdatedAt time.Time
-				DeletedAt gorm.DeletedAt `gorm:"index"`
+				ID          uint       `gorm:"primarykey"`
+				Username    string     `gorm:"size:50;not null;unique;comment:'用户名'"`
+				Password    string     `gorm:"size:255;not null;comment:'密码'"`
+				Email       string     `gorm:"size:100;not null;unique;comment:'邮箱'"`
+				Nickname    string     `gorm:"size:50;comment:'昵称'"`
+				Avatar      string     `gorm:"size:255;comment:'头像'"`
+				Status      int        `gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
+				LastLoginAt *time.Time `gorm:"comment:'最后登录时间'"`
+				LastLoginIP string     `gorm:"size:50;comment:'最后登录IP'"`
+				CreatedAt   time.Time
+				UpdatedAt   time.Time
+				DeletedAt   gorm.DeletedAt `gorm:"index"`
 			}
 
 			// Create users table
@@ -47,6 +48,14 @@ func init() {
 				}
 			}
 
+			// Check and create idx_users_last_login_at
+			tx.Raw("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_users_last_login_at'").Scan(&count)
+			if count == 0 {
+				if err := tx.Exec("CREATE INDEX idx_users_last_login_at ON users(last_login_at)").Error; err != nil {
+					return err
+				}
+			}
+
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -55,6 +64,9 @@ func init() {
 				// Ignore error if index doesn't exist
 			}
 			if err := tx.Exec("ALTER TABLE users DROP INDEX idx_users_status").Error; err != nil {
+				// Ignore error if index doesn't exist
+			}
+			if err := tx.Exec("ALTER TABLE users DROP INDEX idx_users_last_login_at").Error; err != nil {
 				// Ignore error if index doesn't exist
 			}
 

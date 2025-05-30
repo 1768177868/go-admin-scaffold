@@ -28,7 +28,7 @@ func (User) TableName() string {
 }
 
 // BeforeSave hook is called before saving the user
-func (u *User) BeforeSave() error {
+func (u *User) BeforeSave(tx *gorm.DB) error {
 	// Add any validation or data processing before save
 	return nil
 }
