@@ -62,6 +62,9 @@ func InitializeApp() (*App, error) {
 	// Create Gin engine
 	engine := gin.New()
 
+	// Use trace middleware first to ensure trace ID is available for all other middleware
+	engine.Use(middleware.Trace())
+
 	// Use logger middleware
 	engine.Use(gin.Logger())
 
@@ -70,9 +73,6 @@ func InitializeApp() (*App, error) {
 
 	// Use CORS middleware
 	engine.Use(middleware.CORS(&cfg.CORS))
-
-	// Use trace middleware
-	engine.Use(middleware.Trace())
 
 	// Setup routes
 	routes.SetupRoutes(engine, cfg)

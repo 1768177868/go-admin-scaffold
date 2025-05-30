@@ -9,19 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	CodeUnauthorized = 10401
+)
+
 // JWT middleware validates JWT tokens
 func JWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.UnauthorizedError(c)
+			response.Error(c, CodeUnauthorized, "Unauthorized")
 			c.Abort()
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			response.UnauthorizedError(c)
+			response.Error(c, CodeUnauthorized, "Invalid authorization header")
 			c.Abort()
 			return
 		}
@@ -32,7 +36,7 @@ func JWT() gin.HandlerFunc {
 		// Validate token
 		claims, err := authSvc.ValidateToken(parts[1])
 		if err != nil {
-			response.UnauthorizedError(c)
+			response.Error(c, CodeUnauthorized, "Invalid token")
 			c.Abort()
 			return
 		}
@@ -40,14 +44,14 @@ func JWT() gin.HandlerFunc {
 		// Get user from claims
 		user, err := authSvc.GetUserFromClaims(c.Request.Context(), claims)
 		if err != nil {
-			response.UnauthorizedError(c)
+			response.Error(c, CodeUnauthorized, "Invalid user")
 			c.Abort()
 			return
 		}
 
 		// Set user in context
 		if user == nil {
-			response.UnauthorizedError(c)
+			response.Error(c, CodeUnauthorized, "User not found")
 			c.Abort()
 			return
 		}

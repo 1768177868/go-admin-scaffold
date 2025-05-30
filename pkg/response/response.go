@@ -40,9 +40,15 @@ func Success(c *gin.Context, data interface{}) {
 	JSON(c, http.StatusOK, CodeSuccess, "success", data)
 }
 
-// Error sends an error response
+// Error sends an error response with trace ID
 func Error(c *gin.Context, code int, message string) {
-	JSON(c, http.StatusOK, code, message, nil)
+	resp := Response{
+		Code:    code,
+		Message: message,
+		Data:    nil,
+		TraceID: utils.GetTraceID(c),
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ValidationError sends a validation error response
@@ -52,12 +58,12 @@ func ValidationError(c *gin.Context, message string) {
 
 // NotFoundError sends a not found error response
 func NotFoundError(c *gin.Context) {
-	JSON(c, http.StatusOK, CodeNotFound, "Resource not found", nil)
+	Error(c, CodeNotFound, "Resource not found")
 }
 
 // BusinessError sends a business error response
 func BusinessError(c *gin.Context, message string) {
-	JSON(c, http.StatusOK, CodeBusinessError, message, nil)
+	Error(c, CodeBusinessError, message)
 }
 
 // PageSuccess sends a successful paginated response
@@ -99,20 +105,12 @@ func ServerError(c *gin.Context) {
 
 // UnauthorizedError returns an unauthorized error response
 func UnauthorizedError(c *gin.Context) {
-	c.JSON(http.StatusUnauthorized, Response{
-		Code:    CodeUnauthorized,
-		Message: "Unauthorized",
-		Data:    nil,
-	})
+	Error(c, CodeUnauthorized, "Unauthorized")
 }
 
 // ForbiddenError returns a forbidden error response
 func ForbiddenError(c *gin.Context) {
-	c.JSON(http.StatusForbidden, Response{
-		Code:    CodeForbidden,
-		Message: "Forbidden",
-		Data:    nil,
-	})
+	Error(c, CodeForbidden, "Forbidden")
 }
 
 // Unauthorized sends a 401 Unauthorized response
