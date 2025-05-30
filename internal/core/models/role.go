@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -48,8 +47,8 @@ type Role struct {
 	Description string         `json:"description" gorm:"size:255;comment:'角色描述'"`
 	Status      int            `json:"status" gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
 	PermList    StringSlice    `json:"perm_list" gorm:"type:json"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"type:timestamp"`
-	UpdatedAt   time.Time      `json:"updated_at" gorm:"type:timestamp"`
+	CreatedAt   CustomTime     `json:"created_at" gorm:"type:timestamp"`
+	UpdatedAt   CustomTime     `json:"updated_at" gorm:"type:timestamp"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index;type:timestamp"`
 	Users       []User         `json:"users,omitempty" gorm:"many2many:user_roles;"`
 	Permissions []Permission   `json:"permissions,omitempty" gorm:"many2many:role_permissions;"`

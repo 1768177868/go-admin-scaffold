@@ -9,38 +9,48 @@ import (
 	"gorm.io/gorm"
 )
 
-// CustomTime is a custom time type that formats time in a consistent way
+// CustomTime 是一个自定义时间类型，用于统一时间格式
 type CustomTime time.Time
 
-// MarshalJSON implements the json.Marshaler interface
+// MarshalJSON 实现 json.Marshaler 接口
 func (t CustomTime) MarshalJSON() ([]byte, error) {
 	tm := time.Time(t)
 	if tm.IsZero() {
 		return []byte("null"), nil
 	}
-	return json.Marshal(tm.Format("2006-01-02 15:04:05"))
+	// 使用本地时区格式化时间
+	return json.Marshal(tm.Local().Format("2006-01-02 15:04:05"))
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface
+// UnmarshalJSON 实现 json.Unmarshaler 接口
 func (t *CustomTime) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	tm, err := time.Parse("2006-01-02 15:04:05", s)
-	if err != nil {
-		return err
+	// 尝试多种时间格式解析
+	formats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05+08:00",
+		time.RFC3339,
 	}
-	*t = CustomTime(tm)
-	return nil
+
+	for _, format := range formats {
+		if tm, err := time.Parse(format, s); err == nil {
+			*t = CustomTime(tm)
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid time format: %s", s)
 }
 
-// Value implements the driver.Valuer interface
+// Value 实现 driver.Valuer 接口
 func (t CustomTime) Value() (driver.Value, error) {
 	return time.Time(t), nil
 }
 
-// Scan implements the sql.Scanner interface
+// Scan 实现 sql.Scanner 接口
 func (t *CustomTime) Scan(value interface{}) error {
 	if value == nil {
 		*t = CustomTime(time.Time{})
@@ -62,9 +72,9 @@ func (t *CustomTime) Scan(value interface{}) error {
 	}
 }
 
-// String returns the time in the format "2006-01-02 15:04:05"
+// String 返回格式化的时间字符串
 func (t CustomTime) String() string {
-	return time.Time(t).Format("2006-01-02 15:04:05")
+	return time.Time(t).Local().Format("2006-01-02 15:04:05")
 }
 
 type BaseModel struct {
