@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"app/cmd/server/setup"
+	_ "app/docs" // 导入 swagger 文档
 	"app/internal/bootstrap"
 	"app/internal/commands"
 	"app/internal/config"
@@ -21,6 +22,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// @title Go Admin Scaffold API
+// @version 1.0
+// @description A modern Go admin scaffold API server.
+// @host localhost:8080
+// @BasePath /api
 func main() {
 	// Load configuration
 	cfg, err := config.LoadConfig()

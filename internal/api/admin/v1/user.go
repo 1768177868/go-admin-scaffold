@@ -11,6 +11,19 @@ import (
 )
 
 // ListUsers handles the request to get a paginated list of users
+// @Summary List users
+// @Description Get a paginated list of users
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Success 200 {object} response.Response{data=response.PageData{list=[]models.User}}
+// @Failure 401 {object} response.Response
+// @Failure 403 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Security Bearer
+// @Router /admin/v1/users [get]
 func ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -31,6 +44,19 @@ func ListUsers(c *gin.Context) {
 }
 
 // CreateUser handles the request to create a new user
+// @Summary Create user
+// @Description Create a new user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body services.CreateUserRequest true "User info"
+// @Success 200 {object} response.Response{data=models.User}
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 403 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Security Bearer
+// @Router /admin/v1/users [post]
 func CreateUser(c *gin.Context) {
 	var req services.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,6 +75,20 @@ func CreateUser(c *gin.Context) {
 }
 
 // GetUser handles the request to get a user by ID
+// @Summary Get user
+// @Description Get user by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} response.Response{data=models.User}
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response
+// @Failure 403 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Security Bearer
+// @Router /admin/v1/users/{id} [get]
 func GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

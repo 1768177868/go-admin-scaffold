@@ -12,6 +12,8 @@ import (
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // responseWriter wraps gin.ResponseWriter to track if response was written
@@ -35,6 +37,9 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 	// Global middleware
 	r.Use(middleware.I18n())                // Add i18n middleware globally
 	r.Use(middleware.ServiceInjection(cfg)) // Add service injection middleware globally
+
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Serve static files
 	r.Static("/static", "./static")
