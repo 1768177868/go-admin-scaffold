@@ -47,8 +47,15 @@ func OperationLog() gin.HandlerFunc {
 		c.Writer = blw
 
 		// Get user information from context
-		userID, _ := c.Get("user_id")
-		username, _ := c.Get("username")
+		var userID uint
+		var username string
+
+		if user, exists := c.Get("user"); exists {
+			if userModel, ok := user.(*models.User); ok {
+				userID = userModel.ID
+				username = userModel.Username
+			}
+		}
 
 		// Process request
 		c.Next()
@@ -58,8 +65,8 @@ func OperationLog() gin.HandlerFunc {
 
 		// Create operation log
 		log := &models.OperationLog{
-			UserID:        userID.(uint),
-			Username:      username.(string),
+			UserID:        userID,
+			Username:      username,
 			IP:            c.ClientIP(),
 			Method:        c.Request.Method,
 			Path:          c.Request.URL.Path,
@@ -79,7 +86,9 @@ func OperationLog() gin.HandlerFunc {
 
 		// Get log service and record the operation
 		if logSvc, exists := c.Get("logService"); exists {
-			logSvc.(*services.LogService).RecordOperationLog(c.Request.Context(), log)
+			if ls, ok := logSvc.(*services.LogService); ok && userID > 0 {
+				ls.RecordOperationLog(c.Request.Context(), log)
+			}
 		}
 	}
 }

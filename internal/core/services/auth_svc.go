@@ -65,7 +65,30 @@ func (s *AuthService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
 
 // GetUserFromClaims retrieves user information from JWT claims
 func (s *AuthService) GetUserFromClaims(ctx context.Context, claims jwt.MapClaims) (*models.User, error) {
-	userID := uint(claims["user_id"].(float64))
+	// Get user_id from claims with type checking
+	userIDValue, exists := claims["user_id"]
+	if !exists {
+		return nil, errors.New("user_id not found in claims")
+	}
+
+	var userID uint
+	switch v := userIDValue.(type) {
+	case float64:
+		userID = uint(v)
+	case float32:
+		userID = uint(v)
+	case int:
+		userID = uint(v)
+	case int64:
+		userID = uint(v)
+	case uint:
+		userID = v
+	case uint64:
+		userID = uint(v)
+	default:
+		return nil, errors.New("invalid user_id type in claims")
+	}
+
 	return s.userRepo.FindByID(ctx, userID)
 }
 
