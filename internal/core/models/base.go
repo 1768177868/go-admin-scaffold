@@ -78,10 +78,13 @@ func (t CustomTime) String() string {
 }
 
 type BaseModel struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt CustomTime     `json:"created_at"`
-	UpdatedAt CustomTime     `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID uint `gorm:"primarykey" json:"id"`
+	// CreatedAt CustomTime `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" gorm:"type:timestamp"`
+	// UpdatedAt CustomTime `json:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"type:timestamp"`
+	// DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index;type:timestamp"`
 }
 
 // Pagination represents common pagination parameters
