@@ -179,3 +179,8 @@ func (s *AuthService) RefreshToken(ctx context.Context, userID uint) (string, er
 
 	return s.generateToken(user)
 }
+
+// GetConfig returns the JWT configuration
+func (s *AuthService) GetConfig() *config.Config {
+	return s.config
+}

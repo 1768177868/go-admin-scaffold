@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"app/internal/core/models"
 	"app/internal/core/services"
 	"app/pkg/response"
 
@@ -35,15 +36,16 @@ func Login(c *gin.Context) {
 
 // RefreshToken handles token refresh requests
 func RefreshToken(c *gin.Context) {
-	// Get user ID from context (set by JWT middleware)
-	userID, exists := c.Get("user_id")
+	// Get user from context (set by JWT middleware)
+	user, exists := c.Get("user")
 	if !exists {
 		response.UnauthorizedError(c)
 		return
 	}
 
+	userModel := user.(*models.User)
 	authSvc := c.MustGet("authService").(*services.AuthService)
-	token, err := authSvc.RefreshToken(c.Request.Context(), userID.(uint))
+	token, err := authSvc.RefreshToken(c.Request.Context(), userModel.ID)
 	if err != nil {
 		response.Error(c, response.CodeServerError, "failed to refresh token")
 		return
@@ -52,5 +54,6 @@ func RefreshToken(c *gin.Context) {
 	response.Success(c, gin.H{
 		"access_token": token,
 		"token_type":   "Bearer",
+		"expires_in":   authSvc.GetConfig().JWT.ExpireTime,
 	})
 }

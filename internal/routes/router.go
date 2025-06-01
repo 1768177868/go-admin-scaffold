@@ -51,7 +51,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		auth := adminV1.Group("/auth")
 		{
 			auth.POST("/login", wrapHandler(adminv1.Login))
-			auth.POST("/refresh", wrapHandler(adminv1.RefreshToken))
+			auth.POST("/refresh", middleware.JWT(), wrapHandler(adminv1.RefreshToken))
 		}
 
 		// WebSocket routes (no JWT middleware needed, token passed via query params)
