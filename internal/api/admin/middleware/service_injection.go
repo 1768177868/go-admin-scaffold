@@ -18,6 +18,7 @@ func ServiceInjection(cfg *config.Config) gin.HandlerFunc {
 		userRepo := repositories.NewUserRepository(db)
 		logRepo := repositories.NewLogRepository(db)
 		roleRepo := repositories.NewRoleRepository(db)
+		todoRepo := repositories.NewTodoRepository(db)
 
 		// Initialize services
 		logSvc := services.NewLogService(logRepo)
@@ -26,6 +27,7 @@ func ServiceInjection(cfg *config.Config) gin.HandlerFunc {
 		rbacSvc := services.NewRBACService(db)
 		roleSvc := services.NewRoleService(roleRepo, db, logSvc)
 		permissionSvc := services.NewPermissionService(db)
+		todoService := services.NewTodoService(todoRepo)
 
 		// Inject services into context
 		c.Set("authService", authSvc)
@@ -34,6 +36,7 @@ func ServiceInjection(cfg *config.Config) gin.HandlerFunc {
 		c.Set("rbacService", rbacSvc)
 		c.Set("roleService", roleSvc)
 		c.Set("permissionService", permissionSvc)
+		c.Set("todoService", todoService)
 
 		c.Next()
 	}

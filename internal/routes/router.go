@@ -164,6 +164,17 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			upload.POST("/file", wrapHandler(uploadHandler.Upload))       // 单文件上传
 			upload.POST("/files", wrapHandler(uploadHandler.MultiUpload)) // 多文件上传
 		}
+
+		// Todo routes
+		todos := adminV1Protected.Group("/todos")
+		{
+			todos.GET("", middleware.RBAC("todo:view"), wrapHandler(adminv1.ListTodos))
+			todos.POST("", middleware.RBAC("todo:create"), wrapHandler(adminv1.CreateTodo))
+			todos.GET("/:id", middleware.RBAC("todo:view"), wrapHandler(adminv1.GetTodo))
+			todos.PUT("/:id", middleware.RBAC("todo:edit"), wrapHandler(adminv1.UpdateTodo))
+			todos.DELETE("/:id", middleware.RBAC("todo:delete"), wrapHandler(adminv1.DeleteTodo))
+		}
+
 	}
 
 	// Open API routes (v1)

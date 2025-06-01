@@ -265,11 +265,16 @@ func (s *TodoService) Delete(ctx context.Context, id uint) error {
 package v1
 
 import (
-    "app/internal/core/services"
-    "app/pkg/response"
-    "github.com/gin-gonic/gin"
+	"strconv"
+
+	"app/internal/core/models"
+	"app/internal/core/services"
+	"app/pkg/response"
+
+	"github.com/gin-gonic/gin"
 )
 
+// CreateTodo handles the request to create a new todo item
 // @Summary Create todo
 // @Description Create a new todo item
 // @Tags todos
@@ -282,21 +287,23 @@ import (
 // @Security Bearer
 // @Router /admin/v1/todos [post]
 func CreateTodo(c *gin.Context) {
-    var req services.CreateTodoRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        response.ValidationError(c, err.Error())
-        return
-    }
+	var req services.CreateTodoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
 
-    todo, err := todoService.Create(c.Request.Context(), &req)
-    if err != nil {
-        response.ServerError(c)
-        return
-    }
+	todoSvc := c.MustGet("todoService").(*services.TodoService)
+	todo, err := todoSvc.Create(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, response.CodeServerError, "failed to create todo")
+		return
+	}
 
-    response.Success(c, todo)
+	response.Success(c, todo)
 }
 
+// ListTodos handles the request to get a paginated list of todos
 // @Summary List todos
 // @Description Get a paginated list of todos
 // @Tags todos
@@ -309,20 +316,25 @@ func CreateTodo(c *gin.Context) {
 // @Security Bearer
 // @Router /admin/v1/todos [get]
 func ListTodos(c *gin.Context) {
-    pagination := &models.Pagination{
-        Page:     c.GetInt("page"),
-        PageSize: c.GetInt("page_size"),
-    }
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-    todos, err := todoService.List(c.Request.Context(), pagination)
-    if err != nil {
-        response.ServerError(c)
-        return
-    }
+	pagination := &models.Pagination{
+		Page:     page,
+		PageSize: pageSize,
+	}
 
-    response.PageSuccess(c, todos, pagination.Total, pagination.Page, pagination.PageSize)
+	todoSvc := c.MustGet("todoService").(*services.TodoService)
+	todos, err := todoSvc.List(c.Request.Context(), pagination)
+	if err != nil {
+		response.Error(c, response.CodeServerError, "failed to fetch todos")
+		return
+	}
+
+	response.PageSuccess(c, todos, pagination.Total, pagination.Page, pagination.PageSize)
 }
 
+// GetTodo handles the request to get a todo by ID
 // @Summary Get todo
 // @Description Get todo by ID
 // @Tags todos
@@ -335,16 +347,23 @@ func ListTodos(c *gin.Context) {
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [get]
 func GetTodo(c *gin.Context) {
-    id := c.GetUint("id")
-    todo, err := todoService.GetByID(c.Request.Context(), id)
-    if err != nil {
-        response.NotFoundError(c)
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.ParamError(c, "invalid todo ID")
+		return
+	}
 
-    response.Success(c, todo)
+	todoSvc := c.MustGet("todoService").(*services.TodoService)
+	todo, err := todoSvc.GetByID(c.Request.Context(), uint(id))
+	if err != nil {
+		response.NotFoundError(c)
+		return
+	}
+
+	response.Success(c, todo)
 }
 
+// UpdateTodo handles the request to update a todo
 // @Summary Update todo
 // @Description Update todo by ID
 // @Tags todos
@@ -359,22 +378,29 @@ func GetTodo(c *gin.Context) {
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [put]
 func UpdateTodo(c *gin.Context) {
-    id := c.GetUint("id")
-    var req services.UpdateTodoRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        response.ValidationError(c, err.Error())
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.ParamError(c, "invalid todo ID")
+		return
+	}
 
-    todo, err := todoService.Update(c.Request.Context(), id, &req)
-    if err != nil {
-        response.ServerError(c)
-        return
-    }
+	var req services.UpdateTodoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
 
-    response.Success(c, todo)
+	todoSvc := c.MustGet("todoService").(*services.TodoService)
+	todo, err := todoSvc.Update(c.Request.Context(), uint(id), &req)
+	if err != nil {
+		response.Error(c, response.CodeServerError, "failed to update todo")
+		return
+	}
+
+	response.Success(c, todo)
 }
 
+// DeleteTodo handles the request to delete a todo
 // @Summary Delete todo
 // @Description Delete todo by ID
 // @Tags todos
@@ -387,43 +413,50 @@ func UpdateTodo(c *gin.Context) {
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [delete]
 func DeleteTodo(c *gin.Context) {
-    id := c.GetUint("id")
-    if err := todoService.Delete(c.Request.Context(), id); err != nil {
-        response.ServerError(c)
-        return
-    }
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.ParamError(c, "invalid todo ID")
+		return
+	}
 
-    response.Success(c, nil)
+	todoSvc := c.MustGet("todoService").(*services.TodoService)
+	if err := todoSvc.Delete(c.Request.Context(), uint(id)); err != nil {
+		response.Error(c, response.CodeServerError, "failed to delete todo")
+		return
+	}
+
+	response.Success(c, nil)
 }
 ```
 
 ## 6. 注册路由
 
-在 `internal/api/admin/v1/todo.go` 中添加路由注册：
+在 `internal/routes/router.go` 中的 `adminV1Protected` 路由组中添加 Todo 路由：
 
 ```go
-// RegisterTodoRoutes 注册 Todo 相关路由
-func RegisterTodoRoutes(r *gin.RouterGroup) {
-    todos := r.Group("/todos")
-    todos.Use(middleware.RBAC("todo:manage"))
-    {
-        todos.POST("", wrapHandler(CreateTodo))
-        todos.GET("", wrapHandler(ListTodos))
-        todos.GET("/:id", wrapHandler(GetTodo))
-        todos.PUT("/:id", wrapHandler(UpdateTodo))
-        todos.DELETE("/:id", wrapHandler(DeleteTodo))
-    }
+// Todo routes
+todos := adminV1Protected.Group("/todos")
+{
+	todos.GET("", middleware.RBAC("todo:view"), wrapHandler(adminv1.ListTodos))
+	todos.POST("", middleware.RBAC("todo:create"), wrapHandler(adminv1.CreateTodo))
+	todos.GET("/:id", middleware.RBAC("todo:view"), wrapHandler(adminv1.GetTodo))
+	todos.PUT("/:id", middleware.RBAC("todo:edit"), wrapHandler(adminv1.UpdateTodo))
+	todos.DELETE("/:id", middleware.RBAC("todo:delete"), wrapHandler(adminv1.DeleteTodo))
 }
 ```
 
-然后在 `internal/routes/router.go` 中调用：
+## 7. 注册服务
+
+需要在服务注入中间件中添加 TodoService。在 `internal/api/admin/middleware/service_injection.go` 中添加：
 
 ```go
-// 在 SetupRoutes 函数中的 adminV1Protected 路由组中添加：
-adminv1.RegisterTodoRoutes(adminV1Protected)
+// 在 ServiceInjection 函数中添加
+todoRepo := repositories.NewTodoRepository(db)
+todoService := services.NewTodoService(todoRepo)
+c.Set("todoService", todoService)
 ```
 
-## 7. API 使用示例
+## 8. API 使用示例
 
 ### 创建待办事项
 ```bash
@@ -466,11 +499,11 @@ curl -X DELETE http://localhost:8080/api/admin/v1/todos/1 \
   -H "Authorization: Bearer your-token"
 ```
 
-## 8. 运行项目
+## 9. 运行项目
 
 1. 运行数据库迁移：
 ```bash
-go run cmd/tools/main.go migrate
+go run cmd/tools/main.go migrate run
 ```
 
 2. 启动服务器：
@@ -506,23 +539,10 @@ http://localhost:8080/swagger/index.html
 - Handlers: 处理 HTTP 请求，参数验证，调用服务层
 - Routes: 定义 API 路由，配置中间件
 
-这个示例展示了如何使用我们的框架构建一个完整的 Todo CRUD 应用，包括：
+### 关键要点
 
-1. 分层架构：
-   - 模型层 (Models)
-   - 数据访问层 (Repositories)
-   - 服务层 (Services)
-   - 处理器层 (Handlers)
-   - API 路由层 (Routes)
-2. 数据库迁移
-3. 权限控制
-4. API 文档
-5. 统一的响应格式
-6. 错误处理
-
-通过这个示例，您可以了解到框架的主要特性和最佳实践。每一层都有其特定的职责：
-- Models: 定义数据结构和验证规则
-- Repositories: 处理数据持久化，封装数据库操作
-- Services: 实现业务逻辑，协调多个仓库
-- Handlers: 处理 HTTP 请求，参数验证，调用服务层
-- Routes: 定义 API 路由，配置中间件 
+1. **服务注入**：通过 `c.MustGet("serviceName")` 获取服务实例
+2. **参数解析**：使用 `strconv.ParseUint` 解析路径参数
+3. **错误处理**：使用统一的错误响应格式
+4. **权限控制**：通过 RBAC 中间件控制访问权限
+5. **API 文档**：使用 Swagger 注解自动生成文档
