@@ -10,10 +10,12 @@
 │   ├── core
 │   │   ├── models
 │   │   │   └── todo.go           # Todo 数据模型
-│   │   ├── handlers
-│   │   │   └── todo_handler.go   # Todo 处理器
-│   │   └── services
-│   │       └── todo_service.go   # Todo 业务逻辑
+│   │   ├── repositories
+│   │   │   └── todo_repository.go # Todo 数据访问层
+│   │   ├── services
+│   │   │   └── todo_service.go   # Todo 业务逻辑
+│   │   └── handlers
+│   │       └── todo_handler.go   # Todo 处理器
 │   ├── api
 │   │   └── admin
 │   │       └── v1
@@ -69,7 +71,67 @@ func (m *CreateTodosTable) Down(db *gorm.DB) error {
 }
 ```
 
-## 3. 创建服务层
+## 3. 创建数据访问层
+
+创建 Todo 仓库 (`internal/core/repositories/todo_repository.go`):
+
+```go
+package repositories
+
+import (
+    "context"
+    "app/internal/core/models"
+    "gorm.io/gorm"
+)
+
+type TodoRepository struct {
+    db *gorm.DB
+}
+
+func NewTodoRepository(db *gorm.DB) *TodoRepository {
+    return &TodoRepository{db: db}
+}
+
+func (r *TodoRepository) Create(ctx context.Context, todo *models.Todo) error {
+    return r.db.Create(todo).Error
+}
+
+func (r *TodoRepository) List(ctx context.Context, pagination *models.Pagination) ([]models.Todo, error) {
+    var todos []models.Todo
+    query := r.db.Model(&models.Todo{})
+    
+    if err := query.Count(&pagination.Total).Error; err != nil {
+        return nil, err
+    }
+    
+    if err := query.Offset(pagination.GetOffset()).
+        Limit(pagination.GetLimit()).
+        Order("created_at DESC").
+        Find(&todos).Error; err != nil {
+        return nil, err
+    }
+    
+    return todos, nil
+}
+
+func (r *TodoRepository) GetByID(ctx context.Context, id uint) (*models.Todo, error) {
+    var todo models.Todo
+    if err := r.db.First(&todo, id).Error; err != nil {
+        return nil, err
+    }
+    return &todo, nil
+}
+
+func (r *TodoRepository) Update(ctx context.Context, todo *models.Todo) error {
+    return r.db.Save(todo).Error
+}
+
+func (r *TodoRepository) Delete(ctx context.Context, id uint) error {
+    return r.db.Delete(&models.Todo{}, id).Error
+}
+```
+
+## 4. 创建服务层
 
 创建 Todo 服务 (`internal/core/services/todo_service.go`):
 
@@ -79,14 +141,15 @@ package services
 import (
     "context"
     "app/internal/core/models"
+    "app/internal/core/repositories"
 )
 
 type TodoService struct {
-    db *gorm.DB
+    repo *repositories.TodoRepository
 }
 
-func NewTodoService(db *gorm.DB) *TodoService {
-    return &TodoService{db: db}
+func NewTodoService(repo *repositories.TodoRepository) *TodoService {
+    return &TodoService{repo: repo}
 }
 
 type CreateTodoRequest struct {
@@ -105,40 +168,22 @@ func (s *TodoService) Create(ctx context.Context, req *CreateTodoRequest) (*mode
         Title:       req.Title,
         Description: req.Description,
     }
-    if err := s.db.Create(todo).Error; err != nil {
+    if err := s.repo.Create(ctx, todo); err != nil {
         return nil, err
     }
     return todo, nil
 }
 
 func (s *TodoService) List(ctx context.Context, pagination *models.Pagination) ([]models.Todo, error) {
-    var todos []models.Todo
-    query := s.db.Model(&models.Todo{})
-    
-    if err := query.Count(&pagination.Total).Error; err != nil {
-        return nil, err
-    }
-    
-    if err := query.Offset(pagination.GetOffset()).
-        Limit(pagination.GetLimit()).
-        Order("created_at DESC").
-        Find(&todos).Error; err != nil {
-        return nil, err
-    }
-    
-    return todos, nil
+    return s.repo.List(ctx, pagination)
 }
 
 func (s *TodoService) GetByID(ctx context.Context, id uint) (*models.Todo, error) {
-    var todo models.Todo
-    if err := s.db.First(&todo, id).Error; err != nil {
-        return nil, err
-    }
-    return &todo, nil
+    return s.repo.GetByID(ctx, id)
 }
 
 func (s *TodoService) Update(ctx context.Context, id uint, req *UpdateTodoRequest) (*models.Todo, error) {
-    todo, err := s.GetByID(ctx, id)
+    todo, err := s.repo.GetByID(ctx, id)
     if err != nil {
         return nil, err
     }
@@ -147,18 +192,18 @@ func (s *TodoService) Update(ctx context.Context, id uint, req *UpdateTodoReques
     todo.Description = req.Description
     todo.Completed = req.Completed
     
-    if err := s.db.Save(todo).Error; err != nil {
+    if err := s.repo.Update(ctx, todo); err != nil {
         return nil, err
     }
     return todo, nil
 }
 
 func (s *TodoService) Delete(ctx context.Context, id uint) error {
-    return s.db.Delete(&models.Todo{}, id).Error
+    return s.repo.Delete(ctx, id)
 }
 ```
 
-## 4. 创建处理器
+## 5. 创建处理器
 
 创建 Todo 处理器 (`internal/core/handlers/todo_handler.go`):
 
@@ -306,7 +351,7 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 }
 ```
 
-## 5. 注册路由
+## 6. 注册路由
 
 在 `internal/routes/router.go` 中添加 Todo 路由：
 
@@ -315,7 +360,10 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 todos := adminV1Protected.Group("/todos")
 todos.Use(middleware.RBAC("todo:manage"))
 {
-    todoHandler := handlers.NewTodoHandler(services.NewTodoService(database.GetDB()))
+    todoRepo := repositories.NewTodoRepository(database.GetDB())
+    todoService := services.NewTodoService(todoRepo)
+    todoHandler := handlers.NewTodoHandler(todoService)
+    
     todos.POST("", wrapHandler(todoHandler.Create))
     todos.GET("", wrapHandler(todoHandler.List))
     todos.GET("/:id", wrapHandler(todoHandler.Get))
@@ -324,7 +372,7 @@ todos.Use(middleware.RBAC("todo:manage"))
 }
 ```
 
-## 6. API 使用示例
+## 7. API 使用示例
 
 ### 创建待办事项
 ```bash
@@ -367,7 +415,7 @@ curl -X DELETE http://localhost:8080/api/admin/v1/todos/1 \
   -H "Authorization: Bearer your-token"
 ```
 
-## 7. 运行项目
+## 8. 运行项目
 
 1. 运行数据库迁移：
 ```bash
@@ -388,11 +436,42 @@ http://localhost:8080/swagger/index.html
 
 这个示例展示了如何使用我们的框架构建一个完整的 Todo CRUD 应用，包括：
 
-1. 分层架构：模型层、服务层、处理器层
+1. 分层架构：
+   - 模型层 (Models)
+   - 数据访问层 (Repositories)
+   - 服务层 (Services)
+   - 处理器层 (Handlers)
+   - API 路由层 (Routes)
 2. 数据库迁移
 3. 权限控制
 4. API 文档
 5. 统一的响应格式
 6. 错误处理
 
-通过这个示例，您可以了解到框架的主要特性和最佳实践。 
+通过这个示例，您可以了解到框架的主要特性和最佳实践。每一层都有其特定的职责：
+- Models: 定义数据结构和验证规则
+- Repositories: 处理数据持久化，封装数据库操作
+- Services: 实现业务逻辑，协调多个仓库
+- Handlers: 处理 HTTP 请求，参数验证，调用服务层
+- Routes: 定义 API 路由，配置中间件
+
+这个示例展示了如何使用我们的框架构建一个完整的 Todo CRUD 应用，包括：
+
+1. 分层架构：
+   - 模型层 (Models)
+   - 数据访问层 (Repositories)
+   - 服务层 (Services)
+   - 处理器层 (Handlers)
+   - API 路由层 (Routes)
+2. 数据库迁移
+3. 权限控制
+4. API 文档
+5. 统一的响应格式
+6. 错误处理
+
+通过这个示例，您可以了解到框架的主要特性和最佳实践。每一层都有其特定的职责：
+- Models: 定义数据结构和验证规则
+- Repositories: 处理数据持久化，封装数据库操作
+- Services: 实现业务逻辑，协调多个仓库
+- Handlers: 处理 HTTP 请求，参数验证，调用服务层
+- Routes: 定义 API 路由，配置中间件 
