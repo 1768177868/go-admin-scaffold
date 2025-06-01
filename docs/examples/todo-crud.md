@@ -12,14 +12,12 @@
 │   │   │   └── todo.go           # Todo 数据模型
 │   │   ├── repositories
 │   │   │   └── todo_repository.go # Todo 数据访问层
-│   │   ├── services
-│   │   │   └── todo_service.go   # Todo 业务逻辑
-│   │   └── handlers
-│   │       └── todo_handler.go   # Todo 处理器
+│   │   └── services
+│   │       └── todo_service.go   # Todo 业务逻辑
 │   ├── api
 │   │   └── admin
 │   │       └── v1
-│   │           └── todo.go       # Todo API 路由处理
+│   │           └── todo.go       # Todo 处理器和路由
 │   └── database
 │       └── migrations
 │           └── create_todos_table.go  # 数据库迁移
@@ -205,24 +203,16 @@ func (s *TodoService) Delete(ctx context.Context, id uint) error {
 
 ## 5. 创建处理器
 
-创建 Todo 处理器 (`internal/core/handlers/todo_handler.go`):
+创建 Todo 处理器 (`internal/api/admin/v1/todo.go`):
 
 ```go
-package handlers
+package v1
 
 import (
     "app/internal/core/services"
     "app/pkg/response"
     "github.com/gin-gonic/gin"
 )
-
-type TodoHandler struct {
-    todoService *services.TodoService
-}
-
-func NewTodoHandler(todoService *services.TodoService) *TodoHandler {
-    return &TodoHandler{todoService: todoService}
-}
 
 // @Summary Create todo
 // @Description Create a new todo item
@@ -235,14 +225,14 @@ func NewTodoHandler(todoService *services.TodoService) *TodoHandler {
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/todos [post]
-func (h *TodoHandler) Create(c *gin.Context) {
+func CreateTodo(c *gin.Context) {
     var req services.CreateTodoRequest
     if err := c.ShouldBindJSON(&req); err != nil {
         response.ValidationError(c, err.Error())
         return
     }
 
-    todo, err := h.todoService.Create(c.Request.Context(), &req)
+    todo, err := todoService.Create(c.Request.Context(), &req)
     if err != nil {
         response.ServerError(c)
         return
@@ -262,13 +252,13 @@ func (h *TodoHandler) Create(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/todos [get]
-func (h *TodoHandler) List(c *gin.Context) {
+func ListTodos(c *gin.Context) {
     pagination := &models.Pagination{
         Page:     c.GetInt("page"),
         PageSize: c.GetInt("page_size"),
     }
 
-    todos, err := h.todoService.List(c.Request.Context(), pagination)
+    todos, err := todoService.List(c.Request.Context(), pagination)
     if err != nil {
         response.ServerError(c)
         return
@@ -288,9 +278,9 @@ func (h *TodoHandler) List(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [get]
-func (h *TodoHandler) Get(c *gin.Context) {
+func GetTodo(c *gin.Context) {
     id := c.GetUint("id")
-    todo, err := h.todoService.GetByID(c.Request.Context(), id)
+    todo, err := todoService.GetByID(c.Request.Context(), id)
     if err != nil {
         response.NotFoundError(c)
         return
@@ -312,7 +302,7 @@ func (h *TodoHandler) Get(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [put]
-func (h *TodoHandler) Update(c *gin.Context) {
+func UpdateTodo(c *gin.Context) {
     id := c.GetUint("id")
     var req services.UpdateTodoRequest
     if err := c.ShouldBindJSON(&req); err != nil {
@@ -320,7 +310,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
         return
     }
 
-    todo, err := h.todoService.Update(c.Request.Context(), id, &req)
+    todo, err := todoService.Update(c.Request.Context(), id, &req)
     if err != nil {
         response.ServerError(c)
         return
@@ -340,9 +330,9 @@ func (h *TodoHandler) Update(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/todos/{id} [delete]
-func (h *TodoHandler) Delete(c *gin.Context) {
+func DeleteTodo(c *gin.Context) {
     id := c.GetUint("id")
-    if err := h.todoService.Delete(c.Request.Context(), id); err != nil {
+    if err := todoService.Delete(c.Request.Context(), id); err != nil {
         response.ServerError(c)
         return
     }
@@ -353,23 +343,28 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 
 ## 6. 注册路由
 
-在 `internal/routes/router.go` 中添加 Todo 路由：
+在 `internal/api/admin/v1/todo.go` 中添加路由注册：
+
+```go
+// RegisterTodoRoutes 注册 Todo 相关路由
+func RegisterTodoRoutes(r *gin.RouterGroup) {
+    todos := r.Group("/todos")
+    todos.Use(middleware.RBAC("todo:manage"))
+    {
+        todos.POST("", wrapHandler(CreateTodo))
+        todos.GET("", wrapHandler(ListTodos))
+        todos.GET("/:id", wrapHandler(GetTodo))
+        todos.PUT("/:id", wrapHandler(UpdateTodo))
+        todos.DELETE("/:id", wrapHandler(DeleteTodo))
+    }
+}
+```
+
+然后在 `internal/routes/router.go` 中调用：
 
 ```go
 // 在 SetupRoutes 函数中的 adminV1Protected 路由组中添加：
-todos := adminV1Protected.Group("/todos")
-todos.Use(middleware.RBAC("todo:manage"))
-{
-    todoRepo := repositories.NewTodoRepository(database.GetDB())
-    todoService := services.NewTodoService(todoRepo)
-    todoHandler := handlers.NewTodoHandler(todoService)
-    
-    todos.POST("", wrapHandler(todoHandler.Create))
-    todos.GET("", wrapHandler(todoHandler.List))
-    todos.GET("/:id", wrapHandler(todoHandler.Get))
-    todos.PUT("/:id", wrapHandler(todoHandler.Update))
-    todos.DELETE("/:id", wrapHandler(todoHandler.Delete))
-}
+adminv1.RegisterTodoRoutes(adminV1Protected)
 ```
 
 ## 7. API 使用示例
