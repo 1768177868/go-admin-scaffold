@@ -31,6 +31,19 @@ type UpdatePermissionRequest struct {
 	Status      int    `json:"status"`
 }
 
+// PermissionTreeNode represents a node in the permission tree
+type PermissionTreeNode struct {
+	ID          uint                 `json:"id"`
+	Name        string               `json:"name"`
+	DisplayName string               `json:"display_name"`
+	Description string               `json:"description"`
+	Module      string               `json:"module"`
+	Action      string               `json:"action"`
+	Resource    string               `json:"resource"`
+	Status      int                  `json:"status"`
+	Children    []PermissionTreeNode `json:"children,omitempty"`
+}
+
 func NewPermissionService(db *gorm.DB) *PermissionService {
 	return &PermissionService{
 		db: db,
@@ -150,4 +163,68 @@ func (s *PermissionService) GetByNames(ctx context.Context, names []string) ([]m
 	var permissions []models.Permission
 	err := s.db.WithContext(ctx).Where("name IN ? AND status = 1", names).Find(&permissions).Error
 	return permissions, err
+}
+
+// GetPermissionTree returns the permission tree structure
+func (s *PermissionService) GetPermissionTree(ctx context.Context) ([]PermissionTreeNode, error) {
+	var permissions []models.Permission
+	err := s.db.WithContext(ctx).Find(&permissions).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// First, group by module
+	moduleMap := make(map[string][]models.Permission)
+	for _, perm := range permissions {
+		moduleMap[perm.Module] = append(moduleMap[perm.Module], perm)
+	}
+
+	// Build tree
+	var tree []PermissionTreeNode
+	for module, perms := range moduleMap {
+		// Create module node
+		moduleNode := PermissionTreeNode{
+			Name:        module,
+			DisplayName: module, // You might want to add a display name mapping
+			Module:      module,
+			Children:    make([]PermissionTreeNode, 0),
+		}
+
+		// Group by resource
+		resourceMap := make(map[string][]models.Permission)
+		for _, perm := range perms {
+			resourceMap[perm.Resource] = append(resourceMap[perm.Resource], perm)
+		}
+
+		// Add resource nodes
+		for resource, resourcePerms := range resourceMap {
+			resourceNode := PermissionTreeNode{
+				Name:        resource,
+				DisplayName: resource, // You might want to add a display name mapping
+				Resource:    resource,
+				Children:    make([]PermissionTreeNode, 0),
+			}
+
+			// Add permission nodes
+			for _, perm := range resourcePerms {
+				permNode := PermissionTreeNode{
+					ID:          perm.ID,
+					Name:        perm.Name,
+					DisplayName: perm.DisplayName,
+					Description: perm.Description,
+					Module:      perm.Module,
+					Action:      perm.Action,
+					Resource:    perm.Resource,
+					Status:      perm.Status,
+				}
+				resourceNode.Children = append(resourceNode.Children, permNode)
+			}
+
+			moduleNode.Children = append(moduleNode.Children, resourceNode)
+		}
+
+		tree = append(tree, moduleNode)
+	}
+
+	return tree, nil
 }

@@ -11,6 +11,16 @@ common:
   confirm: "确认"
   success: "成功"
   error: "错误"
+  loading: "加载中..."
+  refresh: "刷新"
+  reset: "重置"
+  submit: "提交"
+  close: "关闭"
+  view: "查看"
+  export: "导出"
+  import: "导入"
+  filter: "筛选"
+  clear: "清空"
 
 auth:
   login: "登录"
@@ -19,8 +29,11 @@ auth:
   forgot_password: "忘记密码"
   reset_password: "重置密码"
   invalid_credentials: "用户名或密码错误"
+  invalid_captcha: "验证码错误"
   login_success: "登录成功"
   logout_success: "退出成功"
+  captcha: "验证码"
+  captcha_placeholder: "请输入验证码"
 
 user:
   username: "用户名"
@@ -32,6 +45,59 @@ user:
   created_at: "创建时间"
   updated_at: "更新时间"
   last_login: "最后登录"
+  nickname: "昵称"
+  avatar: "头像"
+  active: "启用"
+  inactive: "禁用"
+  user_management: "用户管理"
+  user_list: "用户列表"
+  add_user: "添加用户"
+  edit_user: "编辑用户"
+  delete_user: "删除用户"
+  user_details: "用户详情"
+
+role:
+  role_management: "角色管理"
+  role_list: "角色列表"
+  role_name: "角色名称"
+  role_description: "角色描述"
+  permissions: "权限"
+  add_role: "添加角色"
+  edit_role: "编辑角色"
+  delete_role: "删除角色"
+
+permission:
+  permission_management: "权限管理"
+  permission_list: "权限列表"
+  permission_name: "权限名称"
+  permission_code: "权限代码"
+  permission_description: "权限描述"
+  module: "模块"
+
+log:
+  log_management: "日志管理"
+  login_log: "登录日志"
+  operation_log: "操作日志"
+  log_time: "日志时间"
+  ip_address: "IP地址"
+  user_agent: "用户代理"
+  operation: "操作"
+  result: "结果"
+
+dashboard:
+  dashboard: "仪表盘"
+  total_users: "总用户数"
+  active_users: "活跃用户"
+  total_roles: "总角色数"
+  system_info: "系统信息"
+
+profile:
+  profile: "个人资料"
+  change_password: "修改密码"
+  old_password: "原密码"
+  new_password: "新密码"
+  confirm_password: "确认密码"
+  update_profile: "更新资料"
 
 validation:
   required: "%s不能为空"
@@ -46,4 +112,14 @@ errors:
   not_found: "资源不存在"
   unauthorized: "未授权访问"
   forbidden: "禁止访问"
-  invalid_request: "无效的请求" 
+  invalid_request: "无效的请求"
+  operation_failed: "操作失败"
+  data_not_found: "数据不存在"
+
+messages:
+  create_success: "创建成功"
+  update_success: "更新成功"
+  delete_success: "删除成功"
+  operation_success: "操作成功"
+  confirm_delete: "确认删除此项吗？"
+  no_data: "暂无数据" 

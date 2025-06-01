@@ -25,12 +25,6 @@ func ListLoginLogs(c *gin.Context) {
 		return
 	}
 
-	// Return logs
-	if err != nil {
-		response.ServerError(c)
-		return
-	}
-
 	response.PageSuccess(c, logs, total, page, pageSize)
 }
 
@@ -47,12 +41,6 @@ func ListOperationLogs(c *gin.Context) {
 	logs, total, err := logSvc.GetOperationLogs(c.Request.Context(), page, pageSize)
 	if err != nil {
 		response.ValidationError(c, err.Error())
-		return
-	}
-
-	// Return logs
-	if err != nil {
-		response.ServerError(c)
 		return
 	}
 

@@ -27,12 +27,19 @@ type PageData struct {
 
 // Response codes
 const (
-	CodeSuccess         = 0     // Success
-	CodeParamError      = 10000 // Parameter error
-	CodeValidationError = 10001 // Validation error
-	CodeServerError     = 10002 // Server error
-	CodeNotFound        = 10003 // Not found
-	CodeBusinessError   = 10004 // Business error
+	CodeSuccess            = 0     // Success
+	CodeParamError         = 10000 // Parameter error
+	CodeValidationError    = 10001 // Validation error
+	CodeServerError        = 10002 // Server error
+	CodeNotFound           = 10003 // Not found
+	CodeBusinessError      = 10004 // Business error
+	CodeUnauthorized       = 10005 // Unauthorized
+	CodeForbidden          = 10006 // Forbidden
+	CodeCaptchaError       = 10007 // Captcha error
+	CodeInvalidCaptcha     = 10008 // Invalid captcha
+	CodeInvalidCredentials = 10009 // Invalid credentials
+	CodeEmailTaken         = 10010 // Email already taken
+	CodePermissionDenied   = 10011 // Permission denied
 )
 
 // Success sends a successful response

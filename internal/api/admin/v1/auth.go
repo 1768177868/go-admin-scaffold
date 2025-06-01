@@ -3,16 +3,37 @@ package v1
 import (
 	"app/internal/core/models"
 	"app/internal/core/services"
+	"app/pkg/captcha"
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
+
+// GetCaptcha generates and returns a captcha image
+func GetCaptcha(c *gin.Context) {
+	id, b64s, err := captcha.GenerateCaptcha()
+	if err != nil {
+		response.ServerError(c)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"captcha_id":    id,
+		"captcha_image": b64s,
+	})
+}
 
 // Login handles user authentication and returns a JWT token
 func Login(c *gin.Context) {
 	var req services.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ValidationError(c, err.Error())
+		return
+	}
+
+	// Verify captcha
+	if !captcha.VerifyCaptcha(req.CaptchaID, req.CaptchaCode) {
+		response.Error(c, response.CodeInvalidCaptcha, "invalid captcha")
 		return
 	}
 

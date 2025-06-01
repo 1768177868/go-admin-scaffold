@@ -15,19 +15,48 @@ type MigrationRecord struct {
 	CreatedAt time.Time `gorm:"not null"`
 }
 
-// MigrationFunc defines a migration function
-type MigrationFunc func(tx *gorm.DB) error
+// Migration interface defines the contract for database migrations
+type Migration interface {
+	Up(db *gorm.DB) error
+	Down(db *gorm.DB) error
+	File() string
+}
 
-// MigrationDefinition defines a migration with up and down functions
+// MigrationDefinition provides a convenient way to create migrations using functions
 type MigrationDefinition struct {
-	Up   MigrationFunc
-	Down MigrationFunc
+	up   func(db *gorm.DB) error
+	down func(db *gorm.DB) error
+	file string
+}
+
+// Up implements the Migration interface
+func (m *MigrationDefinition) Up(db *gorm.DB) error {
+	return m.up(db)
+}
+
+// Down implements the Migration interface
+func (m *MigrationDefinition) Down(db *gorm.DB) error {
+	return m.down(db)
+}
+
+// File implements the Migration interface
+func (m *MigrationDefinition) File() string {
+	return m.file
+}
+
+// NewMigration creates a new migration using the function-based approach
+func NewMigration(file string, up, down func(db *gorm.DB) error) *MigrationDefinition {
+	return &MigrationDefinition{
+		up:   up,
+		down: down,
+		file: file,
+	}
 }
 
 // RegisteredMigration represents a registered migration
 type RegisteredMigration struct {
 	Name       string
-	Definition *MigrationDefinition
+	Definition Migration
 }
 
 // Migrator handles database migrations
@@ -45,7 +74,7 @@ func NewMigrator(db *gorm.DB) *Migrator {
 }
 
 // Register registers a new migration
-func (m *Migrator) Register(name string, migration *MigrationDefinition) {
+func (m *Migrator) Register(name string, migration Migration) {
 	m.migrations = append(m.migrations, RegisteredMigration{
 		Name:       name,
 		Definition: migration,
@@ -132,7 +161,7 @@ func (m *Migrator) Rollback() error {
 
 	for _, migration := range migrations {
 		// Find the migration definition
-		var def *MigrationDefinition
+		var def Migration
 		for _, m := range m.migrations {
 			if m.Name == migration.Name {
 				def = m.Definition
@@ -171,7 +200,7 @@ func (m *Migrator) Reset() error {
 
 	for _, migration := range migrations {
 		// Find the migration definition
-		var def *MigrationDefinition
+		var def Migration
 		for _, m := range m.migrations {
 			if m.Name == migration.Name {
 				def = m.Definition

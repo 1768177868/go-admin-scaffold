@@ -118,3 +118,15 @@ func GetPermissionsByModule(c *gin.Context) {
 
 	response.Success(c, permissions)
 }
+
+// GetPermissionTree handles the request to get the permission tree
+func GetPermissionTree(c *gin.Context) {
+	permSvc := c.MustGet("permissionService").(*services.PermissionService)
+	tree, err := permSvc.GetPermissionTree(c.Request.Context())
+	if err != nil {
+		response.Error(c, response.CodeServerError, "failed to fetch permission tree")
+		return
+	}
+
+	response.Success(c, tree)
+}

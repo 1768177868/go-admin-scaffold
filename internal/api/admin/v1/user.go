@@ -5,28 +5,56 @@ import (
 
 	"app/internal/core/models"
 	"app/internal/core/services"
+	"app/internal/core/types"
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ListUsers handles the request to get a paginated list of users
+// ListUsers handles the request to list users with pagination and search
 // @Summary List users
-// @Description Get a paginated list of users
+// @Description Get paginated list of users with optional search filters
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} response.Response{data=response.PageData{list=[]models.User}}
+// @Param username query string false "Username filter"
+// @Param email query string false "Email filter"
+// @Param status query int false "Status filter (0=inactive, 1=active)"
+// @Param role_id query int false "Role ID filter"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Failure 400 {object} response.Response
 // @Failure 401 {object} response.Response
 // @Failure 403 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Security Bearer
 // @Router /admin/v1/users [get]
 func ListUsers(c *gin.Context) {
+	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	// Parse search filters
+	filters := &types.UserSearchFilters{
+		Username: c.Query("username"),
+		Email:    c.Query("email"),
+		RoleID:   0,
+	}
+
+	// Parse status filter
+	if statusStr := c.Query("status"); statusStr != "" {
+		if status, err := strconv.Atoi(statusStr); err == nil {
+			filters.Status = &status
+		}
+	}
+
+	// Parse role_id filter
+	if roleIDStr := c.Query("role_id"); roleIDStr != "" {
+		if roleID, err := strconv.ParseUint(roleIDStr, 10, 32); err == nil {
+			filters.RoleID = uint(roleID)
+		}
+	}
 
 	pagination := &models.Pagination{
 		Page:     page,
@@ -34,9 +62,9 @@ func ListUsers(c *gin.Context) {
 	}
 
 	userSvc := c.MustGet("userService").(*services.UserService)
-	users, err := userSvc.List(c.Request.Context(), pagination)
+	users, err := userSvc.ListWithFilters(c.Request.Context(), pagination, filters)
 	if err != nil {
-		response.Error(c, response.CodeServerError, "failed to fetch users")
+		response.ServerError(c)
 		return
 	}
 

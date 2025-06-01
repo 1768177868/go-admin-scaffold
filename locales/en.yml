@@ -11,6 +11,16 @@ common:
   confirm: "Confirm"
   success: "Success"
   error: "Error"
+  loading: "Loading..."
+  refresh: "Refresh"
+  reset: "Reset"
+  submit: "Submit"
+  close: "Close"
+  view: "View"
+  export: "Export"
+  import: "Import"
+  filter: "Filter"
+  clear: "Clear"
 
 auth:
   login: "Login"
@@ -19,8 +29,11 @@ auth:
   forgot_password: "Forgot Password"
   reset_password: "Reset Password"
   invalid_credentials: "Invalid username or password"
+  invalid_captcha: "Invalid captcha"
   login_success: "Login successful"
   logout_success: "Logout successful"
+  captcha: "Captcha"
+  captcha_placeholder: "Enter captcha"
 
 user:
   username: "Username"
@@ -32,13 +45,66 @@ user:
   created_at: "Created At"
   updated_at: "Updated At"
   last_login: "Last Login"
+  nickname: "Nickname"
+  avatar: "Avatar"
+  active: "Active"
+  inactive: "Inactive"
+  user_management: "User Management"
+  user_list: "User List"
+  add_user: "Add User"
+  edit_user: "Edit User"
+  delete_user: "Delete User"
+  user_details: "User Details"
+
+role:
+  role_management: "Role Management"
+  role_list: "Role List"
+  role_name: "Role Name"
+  role_description: "Role Description"
+  permissions: "Permissions"
+  add_role: "Add Role"
+  edit_role: "Edit Role"
+  delete_role: "Delete Role"
+
+permission:
+  permission_management: "Permission Management"
+  permission_list: "Permission List"
+  permission_name: "Permission Name"
+  permission_code: "Permission Code"
+  permission_description: "Permission Description"
+  module: "Module"
+
+log:
+  log_management: "Log Management"
+  login_log: "Login Log"
+  operation_log: "Operation Log"
+  log_time: "Log Time"
+  ip_address: "IP Address"
+  user_agent: "User Agent"
+  operation: "Operation"
+  result: "Result"
+
+dashboard:
+  dashboard: "Dashboard"
+  total_users: "Total Users"
+  active_users: "Active Users"
+  total_roles: "Total Roles"
+  system_info: "System Info"
+
+profile:
+  profile: "Profile"
+  change_password: "Change Password"
+  old_password: "Old Password"
+  new_password: "New Password"
+  confirm_password: "Confirm Password"
+  update_profile: "Update Profile"
 
 validation:
   required: "%s is required"
   min_length: "%s must be at least %d characters"
-  max_length: "%s cannot exceed %d characters"
-  invalid_email: "Invalid email address"
-  invalid_phone: "Invalid phone number"
+  max_length: "%s must not exceed %d characters"
+  invalid_email: "Invalid email format"
+  invalid_phone: "Invalid phone number format"
   password_mismatch: "Passwords do not match"
 
 errors:
@@ -46,4 +112,14 @@ errors:
   not_found: "Resource not found"
   unauthorized: "Unauthorized access"
   forbidden: "Access forbidden"
-  invalid_request: "Invalid request" 
+  invalid_request: "Invalid request"
+  operation_failed: "Operation failed"
+  data_not_found: "Data not found"
+
+messages:
+  create_success: "Created successfully"
+  update_success: "Updated successfully"
+  delete_success: "Deleted successfully"
+  operation_success: "Operation successful"
+  confirm_delete: "Are you sure you want to delete this item?"
+  no_data: "No data available" 

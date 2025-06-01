@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"app/internal/core/models"
+	"app/internal/core/types"
 
 	"gorm.io/gorm"
 )
@@ -95,4 +96,44 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 // Delete deletes a user by ID
 func (r *UserRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+}
+
+// ListWithFilters retrieves a paginated list of users with search filters
+func (r *UserRepository) ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error) {
+	var users []models.User
+	query := r.db.WithContext(ctx).Preload("Roles")
+
+	// Apply filters
+	if filters != nil {
+		if filters.Username != "" {
+			query = query.Where("username LIKE ?", "%"+filters.Username+"%")
+		}
+		if filters.Email != "" {
+			query = query.Where("email LIKE ?", "%"+filters.Email+"%")
+		}
+		if filters.Status != nil {
+			query = query.Where("status = ?", *filters.Status)
+		}
+		if filters.RoleID > 0 {
+			query = query.Joins("JOIN user_roles ON users.id = user_roles.user_id").
+				Where("user_roles.role_id = ?", filters.RoleID)
+		}
+	}
+
+	// Get total count for pagination
+	var total int64
+	if err := query.Model(&models.User{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+	pagination.Total = total
+
+	// Apply pagination
+	err := query.Offset(pagination.GetOffset()).
+		Limit(pagination.GetLimit()).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

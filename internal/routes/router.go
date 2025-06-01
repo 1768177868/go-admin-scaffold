@@ -50,6 +50,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		// Auth routes (no JWT protection needed)
 		auth := adminV1.Group("/auth")
 		{
+			auth.GET("/captcha", wrapHandler(adminv1.GetCaptcha))
 			auth.POST("/login", wrapHandler(adminv1.Login))
 			auth.POST("/refresh", middleware.JWT(), wrapHandler(adminv1.RefreshToken))
 		}
@@ -104,6 +105,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			permissions.PUT("/:id", middleware.RBAC("permission:edit"), wrapHandler(adminv1.UpdatePermission))
 			permissions.DELETE("/:id", middleware.RBAC("permission:delete"), wrapHandler(adminv1.DeletePermission))
 			permissions.GET("/modules", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermissionsByModule))
+			permissions.GET("/tree", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermissionTree))
 		}
 
 		// Log routes

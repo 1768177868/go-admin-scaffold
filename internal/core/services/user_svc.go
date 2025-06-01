@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"app/internal/core/models"
+	"app/internal/core/types"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -24,6 +25,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	FindByID(ctx context.Context, id uint) (*models.User, error)
 	ListWithRoles(ctx context.Context, pagination *models.Pagination) ([]models.User, error)
+	ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error)
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
 	Delete(ctx context.Context, id uint) error
@@ -50,20 +52,20 @@ func NewUserService(userRepo UserRepository, logSvc LogServiceInterface) *UserSe
 }
 
 type CreateUserRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=6"`
-	Nickname string `json:"nickname"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
-	Phone    string `json:"phone"`
+	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Status   int    `json:"status"`
 	RoleIDs  []uint `json:"role_ids"`
 }
 
 type UpdateUserRequest struct {
-	Nickname string `json:"nickname"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 	Email    string `json:"email" binding:"omitempty,email"`
-	Phone    string `json:"phone"`
+	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Status   int    `json:"status"`
 	RoleIDs  []uint `json:"role_ids"`
@@ -106,7 +108,6 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*mode
 		Password: string(hashedPassword),
 		Nickname: req.Nickname,
 		Email:    req.Email,
-		Phone:    req.Phone,
 		Avatar:   req.Avatar,
 		Status:   req.Status,
 	}
@@ -152,9 +153,6 @@ func (s *UserService) Update(ctx context.Context, id uint, req *UpdateUserReques
 	}
 	if req.Email != "" {
 		user.Email = req.Email
-	}
-	if req.Phone != "" {
-		user.Phone = req.Phone
 	}
 	if req.Avatar != "" {
 		user.Avatar = req.Avatar
@@ -224,6 +222,11 @@ func (s *UserService) GetByID(ctx context.Context, id uint) (*models.User, error
 // List gets a paginated list of users
 func (s *UserService) List(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
 	return s.userRepo.ListWithRoles(ctx, pagination)
+}
+
+// ListWithFilters gets a paginated list of users with search filters
+func (s *UserService) ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error) {
+	return s.userRepo.ListWithFilters(ctx, pagination, filters)
 }
 
 // ChangePassword changes a user's password

@@ -11,7 +11,6 @@ type User struct {
 	Password  string         `json:"-" gorm:"size:255;not null"`
 	Email     string         `json:"email" gorm:"uniqueIndex;size:100"`
 	Nickname  string         `json:"nickname" gorm:"size:50"`
-	Phone     string         `json:"phone" gorm:"size:20"`
 	Avatar    string         `json:"avatar" gorm:"size:255"`
 	Status    int            `json:"status" gorm:"default:1"`
 	Roles     []Role         `json:"roles" gorm:"many2many:user_roles"`
