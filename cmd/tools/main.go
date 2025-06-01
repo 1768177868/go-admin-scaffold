@@ -27,6 +27,7 @@ func main() {
 	// Register database commands
 	manager.Register(commands.NewMigrateCommand())
 	manager.Register(commands.NewSeedCommand())
+	manager.Register(commands.NewMakeMigrationCommand())
 
 	// Run command from arguments
 	if err := manager.RunFromArgs(); err != nil {

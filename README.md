@@ -647,3 +647,35 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **⭐ If this project helps you, please consider giving it a star!**
+
+## 数据库迁移
+
+
+### 创建迁移文件
+
+```bash
+# 基本迁移
+go run cmd/tools/main.go make:migration create_posts_table
+
+# 创建表的迁移（带模板）
+go run cmd/tools/main.go make:migration create_posts_table --create=posts
+
+# 修改表的迁移（带模板）
+go run cmd/tools/main.go make:migration add_status_to_posts --table=posts
+```
+
+### 执行迁移
+
+```bash
+# 运行所有待执行的迁移
+go run cmd/tools/main.go migrate run
+
+# 查看迁移状态
+go run cmd/tools/main.go migrate status
+
+# 回滚最后一批迁移
+go run cmd/tools/main.go migrate rollback
+
+# 重置并重新运行所有迁移
+go run cmd/tools/main.go migrate refresh
+```

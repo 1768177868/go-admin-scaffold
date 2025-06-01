@@ -48,25 +48,81 @@ func (Todo) TableName() string {
 
 ## 2. 创建数据库迁移
 
-创建迁移文件 (`internal/database/migrations/20240315_create_todos_table.go`):
+### 2.1 生成迁移文件
+
+使用命令生成迁移文件（类似 Laravel）：
+
+```bash
+# 基本迁移
+go run cmd/tools/main.go make:migration create_todos_table
+
+# 创建表的迁移（带模板）
+go run cmd/tools/main.go make:migration create_todos_table --create=todos
+
+# 修改表的迁移（带模板）
+go run cmd/tools/main.go make:migration add_status_to_todos --table=todos
+```
+
+
+### 2.2 编辑迁移文件
+
+生成的迁移文件位于 `internal/database/migrations/` 目录下。对于 Todo 示例，编辑生成的文件：
 
 ```go
 package migrations
 
 import (
-    "app/internal/core/models"
-    "gorm.io/gorm"
+	"time"
+	"app/internal/core/models"
+	"gorm.io/gorm"
 )
 
-type CreateTodosTable struct{}
-
-func (m *CreateTodosTable) Up(db *gorm.DB) error {
-    return db.AutoMigrate(&models.Todo{})
+func init() {
+	Register("create_todos_table", &MigrationDefinition{
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&models.Todo{})
+		},
+		Down: func(tx *gorm.DB) error {
+			return tx.Migrator().DropTable("todos")
+		},
+	})
 }
+```
 
-func (m *CreateTodosTable) Down(db *gorm.DB) error {
-    return db.Migrator().DropTable(&models.Todo{})
-}
+### 2.3 运行迁移
+
+```bash
+# 运行所有待执行的迁移
+go run cmd/tools/main.go migrate run
+
+# 查看迁移状态
+go run cmd/tools/main.go migrate status
+
+# 回滚最后一批迁移
+go run cmd/tools/main.go migrate rollback
+
+# 重置所有迁移
+go run cmd/tools/main.go migrate reset
+
+# 重置并重新运行所有迁移
+go run cmd/tools/main.go migrate refresh
+```
+
+### 2.4 迁移命令选项
+
+- `--create=table_name`: 生成创建表的迁移模板
+- `--table=table_name`: 生成修改表的迁移模板
+
+示例：
+```bash
+# 创建用户表
+go run cmd/tools/main.go make:migration create_users_table --create=users
+
+# 为用户表添加字段
+go run cmd/tools/main.go make:migration add_phone_to_users --table=users
+
+# 创建索引
+go run cmd/tools/main.go make:migration add_index_to_users_email
 ```
 
 ## 3. 创建数据访问层
