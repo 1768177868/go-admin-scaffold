@@ -13,17 +13,18 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Log      LogConfig      `mapstructure:"log"`
-	Cache    CacheConfig    `mapstructure:"cache"`
-	Queue    QueueConfig    `mapstructure:"queue"`
-	I18n     i18n.Config    `mapstructure:"i18n"`
-	CORS     CORSConfig     `mapstructure:"cors"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Storage  StorageConfig  `mapstructure:"storage"`
+	App        AppConfig        `mapstructure:"app"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Log        LogConfig        `mapstructure:"log"`
+	Cache      CacheConfig      `mapstructure:"cache"`
+	Queue      QueueConfig      `mapstructure:"queue"`
+	I18n       i18n.Config      `mapstructure:"i18n"`
+	CORS       CORSConfig       `mapstructure:"cors"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Storage    StorageConfig    `mapstructure:"storage"`
+	SuperAdmin SuperAdminConfig `mapstructure:"super_admin"`
 }
 
 // ServerConfig holds server configuration
@@ -151,6 +152,11 @@ type S3Config struct {
 	UseSSL          bool   `mapstructure:"use_ssl"`
 }
 
+// SuperAdminConfig holds SuperAdmin configuration
+type SuperAdminConfig struct {
+	UserIDs []string `mapstructure:"user_ids"`
+}
+
 // Load loads configuration from environment variables and config files
 func LoadConfig() (*Config, error) {
 	config := &Config{}
@@ -276,6 +282,12 @@ func LoadConfig() (*Config, error) {
 	config.Storage.S3.Region = getEnvOrDefault("STORAGE_S3_REGION", viper.GetString("storage.s3.region"))
 	config.Storage.S3.UseSSL = getEnvBoolOrDefault("STORAGE_S3_USE_SSL", viper.GetBool("storage.s3.use_ssl"))
 
+	// SuperAdmin
+	superAdminIDs := viper.GetStringSlice("super_admin.user_ids")
+	for _, idStr := range superAdminIDs {
+		config.SuperAdmin.UserIDs = append(config.SuperAdmin.UserIDs, idStr)
+	}
+
 	return config, nil
 }
 
@@ -305,4 +317,15 @@ func getEnvBoolOrDefault(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
+}
+
+// ParseSuperAdminIDs converts string IDs to uint
+func (c *Config) ParseSuperAdminIDs() []uint {
+	var ids []uint
+	for _, idStr := range c.SuperAdmin.UserIDs {
+		if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
+			ids = append(ids, uint(id))
+		}
+	}
+	return ids
 }

@@ -71,7 +71,13 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, userID uint) error
 // FindByID retrieves a user by ID
 func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, error) {
 	var user models.User
-	err := r.db.WithContext(ctx).Preload("Roles").Where("id = ?", id).First(&user).Error
+	err := r.db.WithContext(ctx).
+		Preload("Roles", func(db *gorm.DB) *gorm.DB {
+			// Ensure distinct roles to prevent duplicates
+			return db.Distinct()
+		}).
+		Where("id = ?", id).
+		First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -101,34 +107,78 @@ func (r *UserRepository) Delete(ctx context.Context, id uint) error {
 // ListWithFilters retrieves a paginated list of users with search filters
 func (r *UserRepository) ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error) {
 	var users []models.User
-	query := r.db.WithContext(ctx).Preload("Roles")
 
-	// Apply filters
+	// Build the base query without joins first
+	baseQuery := r.db.WithContext(ctx).Model(&models.User{})
+
+	// Apply basic filters
 	if filters != nil {
 		if filters.Username != "" {
-			query = query.Where("username LIKE ?", "%"+filters.Username+"%")
+			baseQuery = baseQuery.Where("username LIKE ?", "%"+filters.Username+"%")
 		}
 		if filters.Email != "" {
-			query = query.Where("email LIKE ?", "%"+filters.Email+"%")
+			baseQuery = baseQuery.Where("email LIKE ?", "%"+filters.Email+"%")
 		}
 		if filters.Status != nil {
-			query = query.Where("status = ?", *filters.Status)
+			baseQuery = baseQuery.Where("status = ?", *filters.Status)
 		}
-		if filters.RoleID > 0 {
-			query = query.Joins("JOIN user_roles ON users.id = user_roles.user_id").
-				Where("user_roles.role_id = ?", filters.RoleID)
+	}
+
+	// Handle role filter separately to avoid JOIN conflicts with Preload
+	var userIDs []uint
+	if filters != nil && filters.RoleID > 0 {
+		// First, get user IDs that have the specified role
+		err := r.db.WithContext(ctx).
+			Table("user_roles").
+			Where("role_id = ?", filters.RoleID).
+			Distinct("user_id"). // Ensure distinct user IDs
+			Pluck("user_id", &userIDs).Error
+		if err != nil {
+			return nil, err
 		}
+
+		if len(userIDs) == 0 {
+			// No users have this role, return empty result
+			pagination.Total = 0
+			return []models.User{}, nil
+		}
+
+		// Filter by these user IDs
+		baseQuery = baseQuery.Where("id IN ?", userIDs)
 	}
 
 	// Get total count for pagination
 	var total int64
-	if err := query.Model(&models.User{}).Count(&total).Error; err != nil {
+	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, err
 	}
 	pagination.Total = total
 
-	// Apply pagination
-	err := query.Offset(pagination.GetOffset()).
+	// Now build the final query with Preload for roles
+	finalQuery := r.db.WithContext(ctx).
+		Preload("Roles", func(db *gorm.DB) *gorm.DB {
+			// Ensure distinct roles to prevent duplicates
+			return db.Distinct()
+		})
+
+	// Apply the same filters to the final query
+	if filters != nil {
+		if filters.Username != "" {
+			finalQuery = finalQuery.Where("username LIKE ?", "%"+filters.Username+"%")
+		}
+		if filters.Email != "" {
+			finalQuery = finalQuery.Where("email LIKE ?", "%"+filters.Email+"%")
+		}
+		if filters.Status != nil {
+			finalQuery = finalQuery.Where("status = ?", *filters.Status)
+		}
+		if filters.RoleID > 0 && len(userIDs) > 0 {
+			finalQuery = finalQuery.Where("id IN ?", userIDs)
+		}
+	}
+
+	// Apply pagination and get results
+	err := finalQuery.Offset(pagination.GetOffset()).
 		Limit(pagination.GetLimit()).
 		Find(&users).Error
 	if err != nil {

@@ -9,6 +9,15 @@ export function getUserList(params) {
   })
 }
 
+// 获取用户列表（别名）
+export function listUsers(params) {
+  return request({
+    url: '/admin/v1/users',
+    method: 'get',
+    params
+  })
+}
+
 // 获取用户详情
 export function getUserDetail(id) {
   return request({
@@ -54,10 +63,14 @@ export function resetPassword(id, data) {
 
 // 更新用户状态
 export function updateUserStatus(id, status) {
+  console.log('updateUserStatus called with:', { id, status, statusType: typeof status })
+  const data = { status }
+  console.log('Sending data:', data)
+  
   return request({
     url: `/admin/v1/users/${id}/status`,
     method: 'put',
-    data: { status }
+    data
   })
 }
 

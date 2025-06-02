@@ -23,7 +23,7 @@ func ServiceInjection(cfg *config.Config) gin.HandlerFunc {
 		// Initialize services
 		logSvc := services.NewLogService(logRepo)
 		authSvc := services.NewAuthService(userRepo, logSvc, cfg)
-		userSvc := services.NewUserService(userRepo, logSvc)
+		userSvc := services.NewUserService(userRepo, logSvc, cfg)
 		rbacSvc := services.NewRBACService(db)
 		roleSvc := services.NewRoleService(roleRepo, db, logSvc)
 		permissionSvc := services.NewPermissionService(db)

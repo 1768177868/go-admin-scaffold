@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"strconv"
 
 	"app/internal/core/models"
@@ -66,6 +67,11 @@ func ListUsers(c *gin.Context) {
 	if err != nil {
 		response.ServerError(c)
 		return
+	}
+
+	// 确保每个用户的 is_super_admin 字段被正确设置
+	for i := range users {
+		users[i].IsSuperAdmin = userSvc.IsSuperAdmin(users[i].ID)
 	}
 
 	response.PageSuccess(c, users, pagination.Total, pagination.Page, pagination.PageSize)
@@ -217,4 +223,46 @@ func UpdateUserRoles(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "User roles updated successfully"})
+}
+
+// UpdateUserStatus handles the request to update a user's status
+func UpdateUserStatus(c *gin.Context) {
+	traceID := c.GetString("trace_id")
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		fmt.Printf("[TRACE: %s] Invalid user ID parameter: %v\n", traceID, err)
+		response.ParamError(c, "invalid user ID")
+		return
+	}
+
+	fmt.Printf("[TRACE: %s] Starting to bind JSON for user %d\n", traceID, id)
+
+	var req struct {
+		Status *int `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[TRACE: %s] Request binding failed for user %d: %v\n", traceID, id, err)
+		response.ValidationError(c, err.Error())
+		return
+	}
+
+	status := *req.Status
+	fmt.Printf("[TRACE: %s] Parsed status value: %d, type: %T\n", traceID, status, status)
+	fmt.Printf("[TRACE: %s] Updating user %d status to %d\n", traceID, id, status)
+
+	userSvc := c.MustGet("userService").(*services.UserService)
+	if err := userSvc.UpdateStatus(c.Request.Context(), uint(id), status); err != nil {
+		fmt.Printf("[TRACE: %s] Failed to update user %d status: %v\n", traceID, id, err)
+		if err == services.ErrSuperAdminModify {
+			response.BusinessError(c, "超级管理员账户状态不能修改")
+			return
+		}
+		response.Error(c, response.CodeServerError, "failed to update user status")
+		return
+	}
+
+	fmt.Printf("[TRACE: %s] Successfully updated user %d status to %d\n", traceID, id, status)
+	response.Success(c, gin.H{"message": "User status updated successfully"})
 }

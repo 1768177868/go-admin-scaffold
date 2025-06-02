@@ -35,6 +35,7 @@ func (w *responseWriter) WriteHeader(statusCode int) {
 // SetupRoutes configures all the routes for the application
 func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 	// Global middleware
+	r.Use(middleware.Trace())               // Add trace middleware globally
 	r.Use(middleware.I18n())                // Add i18n middleware globally
 	r.Use(middleware.ServiceInjection(cfg)) // Add service injection middleware globally
 
@@ -83,6 +84,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			users.GET("/:id", middleware.RBAC("user:view"), wrapHandler(adminv1.GetUser))
 			users.PUT("/:id", middleware.RBAC("user:edit"), wrapHandler(adminv1.UpdateUser))
 			users.DELETE("/:id", middleware.RBAC("user:delete"), wrapHandler(adminv1.DeleteUser))
+			users.PUT("/:id/status", middleware.RBAC("user:edit"), wrapHandler(adminv1.UpdateUserStatus))
 			users.GET("/:id/logs", middleware.RBAC("log:view"), wrapHandler(adminv1.GetUserLogs))
 			users.PUT("/:id/roles", middleware.RBAC("user:edit"), wrapHandler(adminv1.UpdateUserRoles))
 		}

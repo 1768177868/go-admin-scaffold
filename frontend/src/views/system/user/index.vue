@@ -54,17 +54,17 @@
         </template>
       </el-table-column>
       
-      <el-table-column label="用户名" prop="username" />
+      <el-table-column label="用户名" prop="username">
+        <template #default="{ row }">
+          {{ row.username }}
+          <el-tag v-if="row.is_super_admin" type="danger" size="small" effect="dark" style="margin-left: 8px;">超级管理员</el-tag>
+        </template>
+      </el-table-column>
       
       <el-table-column label="邮箱" prop="email" />
       
       <el-table-column label="昵称" prop="nickname" />
-      
-      <el-table-column label="手机号" width="120">
-        <template #default="{ row }">
-          {{ row.phone }}
-        </template>
-      </el-table-column>
+
       
       <el-table-column label="角色" width="120">
         <template #default="{ row }">
@@ -90,28 +90,35 @@
       
       <el-table-column align="center" label="操作" width="250">
         <template #default="{ row }">
-          <el-button type="primary" size="small" @click="handleUpdate(row)">
-            编辑
-          </el-button>
-          <el-button
-            v-if="row.status === 1"
-            size="small"
-            type="warning"
-            @click="handleModifyStatus(row, 0)"
-          >
-            禁用
-          </el-button>
-          <el-button
-            v-else
-            size="small"
-            type="success"
-            @click="handleModifyStatus(row, 1)"
-          >
-            启用
-          </el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">
-            删除
-          </el-button>
+          <!-- 如果是超级管理员，只显示标签 -->
+          <template v-if="row.is_super_admin">
+            <el-tag type="warning">超级管理员账户</el-tag>
+          </template>
+          <!-- 非超级管理员显示操作按钮 -->
+          <template v-else>
+            <el-button type="primary" size="small" @click="handleUpdate(row)">
+              编辑
+            </el-button>
+            <el-button
+              v-if="row.status === 1"
+              size="small"
+              type="warning"
+              @click="handleModifyStatus(row, 0)"
+            >
+              禁用
+            </el-button>
+            <el-button
+              v-else
+              size="small"
+              type="success"
+              @click="handleModifyStatus(row, 1)"
+            >
+              启用
+            </el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              删除
+            </el-button>
+          </template>
         </template>
       </el-table-column>
     </el-table>
@@ -155,9 +162,6 @@
           <el-input v-model="temp.nickname" />
         </el-form-item>
         
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="temp.phone" />
-        </el-form-item>
         
         <el-form-item label="状态" prop="status">
           <el-select v-model="temp.status" placeholder="请选择">
@@ -199,6 +203,8 @@
 </template>
 
 <script>
+import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, createUser, updateUser, deleteUser, updateUserStatus, updateUserRoles } from '@/api/user'
 import { getRoleList } from '@/api/role'
 import Pagination from '@/components/Pagination/index.vue'
@@ -264,7 +270,14 @@ export default {
         if (listQuery.role_id) params.role_id = listQuery.role_id
         
         const { data } = await getUserList(params)
-        list.value = data.items || []
+        
+        // 确保每个用户都有 is_super_admin 字段
+        const userList = (data.items || []).map(user => ({
+          ...user,
+          is_super_admin: Boolean(user.is_super_admin)
+        }))
+        
+        list.value = userList
         total.value = data.pagination?.total || 0
       } catch (error) {
         console.error('获取用户列表失败:', error)
@@ -339,6 +352,10 @@ export default {
     }
 
     const handleUpdate = (row) => {
+      if (row.is_super_admin) {
+        ElMessage.warning('超级管理员账户不能修改')
+        return
+      }
       Object.assign(temp, row)
       temp.role_ids = row.roles?.map(role => role.id) || []
       dialogType.value = 'update'
@@ -370,6 +387,11 @@ export default {
     }
 
     const handleDelete = (row) => {
+      if (row.is_super_admin) {
+        ElMessage.warning('超级管理员账户不能删除')
+        return
+      }
+      
       ElMessageBox.confirm('此操作将永久删除该用户, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -383,12 +405,19 @@ export default {
           getList()
         } catch (error) {
           console.error('删除用户失败:', error)
-          ElMessage.error('删除用户失败')
+          ElMessage.error(error.response?.data?.message || '删除用户失败')
         }
       })
     }
 
     const handleModifyStatus = async (row, status) => {
+      if (row.is_super_admin) {
+        ElMessage.warning('超级管理员账户状态不能修改')
+        return
+      }
+      
+      console.log('handleModifyStatus called:', { userId: row.id, newStatus: status, statusType: typeof status })
+      
       try {
         await updateUserStatus(row.id, status)
         row.status = status
@@ -396,7 +425,7 @@ export default {
         getList()
       } catch (error) {
         console.error('更新状态失败:', error)
-        ElMessage.error('更新状态失败')
+        ElMessage.error(error.response?.data?.message || '更新状态失败')
       }
     }
 

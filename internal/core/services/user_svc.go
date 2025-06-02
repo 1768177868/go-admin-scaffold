@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
+	"app/internal/config"
 	"app/internal/core/models"
 	"app/internal/core/types"
 
@@ -18,6 +20,8 @@ var (
 	ErrUsernameTaken     = errors.New("username is already taken")
 	ErrEmailTaken        = errors.New("email is already taken")
 	ErrInvalidUserStatus = errors.New("invalid user status")
+	ErrSuperAdminModify  = errors.New("super admin account cannot be modified")
+	ErrSuperAdminDelete  = errors.New("super admin account cannot be deleted")
 )
 
 type UserRepository interface {
@@ -42,12 +46,14 @@ type LogServiceInterface interface {
 type UserService struct {
 	userRepo UserRepository
 	logSvc   LogServiceInterface
+	config   *config.Config
 }
 
-func NewUserService(userRepo UserRepository, logSvc LogServiceInterface) *UserService {
+func NewUserService(userRepo UserRepository, logSvc LogServiceInterface, config *config.Config) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 		logSvc:   logSvc,
+		config:   config,
 	}
 }
 
@@ -83,6 +89,23 @@ type ExportUserListRequest struct {
 	Status    *int      `json:"status"`
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
+}
+
+// IsSuperAdmin checks if a user ID is in the super admin list
+func (s *UserService) IsSuperAdmin(userID uint) bool {
+	if s.config == nil {
+		return false
+	}
+	superAdminIDs := s.config.ParseSuperAdminIDs()
+	fmt.Printf("DEBUG: Checking user ID %d against super admin IDs %v\n", userID, superAdminIDs)
+	for _, id := range superAdminIDs {
+		if id == userID {
+			fmt.Printf("DEBUG: User ID %d is super admin\n", userID)
+			return true
+		}
+	}
+	fmt.Printf("DEBUG: User ID %d is NOT super admin\n", userID)
+	return false
 }
 
 // Create creates a new user
@@ -135,34 +158,62 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*mode
 
 // Update updates a user
 func (s *UserService) Update(ctx context.Context, id uint, req *UpdateUserRequest) (*models.User, error) {
-	user, err := s.userRepo.FindByID(ctx, id)
-	if err != nil {
+	// First get user without roles to check basic info
+	var user models.User
+	if err := s.userRepo.GetDB().WithContext(ctx).Select("id", "username", "email", "nickname", "avatar", "status").Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	// Check if email is taken by another user
-	if req.Email != "" && req.Email != user.Email {
-		if existingUser, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil && existingUser.ID != id {
-			return nil, ErrEmailTaken
+	// Prevent modification of super admin account
+	if s.IsSuperAdmin(id) {
+		if req.Status != 0 || req.Username != "" || req.Password != "" || req.Avatar != "" || len(req.RoleIDs) > 0 {
+			return nil, ErrSuperAdminModify
 		}
-	}
+		// Only allow updating nickname and email for super admin
+		updateData := make(map[string]interface{})
+		if req.Nickname != "" {
+			updateData["nickname"] = req.Nickname
+		}
+		if req.Email != "" {
+			if existingUser, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil && existingUser.ID != id {
+				return nil, ErrEmailTaken
+			}
+			updateData["email"] = req.Email
+		}
 
-	// Update fields
-	if req.Nickname != "" {
-		user.Nickname = req.Nickname
-	}
-	if req.Email != "" {
-		user.Email = req.Email
-	}
-	if req.Avatar != "" {
-		user.Avatar = req.Avatar
-	}
-	if req.Status != 0 {
-		user.Status = req.Status
-	}
+		if len(updateData) > 0 {
+			if err := s.userRepo.GetDB().WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Updates(updateData).Error; err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// Normal user update logic
+		updateData := make(map[string]interface{})
 
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return nil, err
+		if req.Email != "" && req.Email != user.Email {
+			if existingUser, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil && existingUser.ID != id {
+				return nil, ErrEmailTaken
+			}
+			updateData["email"] = req.Email
+		}
+		if req.Nickname != "" {
+			updateData["nickname"] = req.Nickname
+		}
+		if req.Username != "" {
+			updateData["username"] = req.Username
+		}
+		if req.Avatar != "" {
+			updateData["avatar"] = req.Avatar
+		}
+		if req.Status != 0 {
+			updateData["status"] = req.Status
+		}
+
+		if len(updateData) > 0 {
+			if err := s.userRepo.GetDB().WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Updates(updateData).Error; err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Record operation log
@@ -179,11 +230,17 @@ func (s *UserService) Update(ctx context.Context, id uint, req *UpdateUserReques
 		})
 	}
 
-	return user, nil
+	// Return updated user with roles
+	return s.userRepo.FindByID(ctx, id)
 }
 
 // Delete deletes a user
 func (s *UserService) Delete(ctx context.Context, id uint) error {
+	// Prevent deletion of super admin account
+	if s.IsSuperAdmin(id) {
+		return ErrSuperAdminDelete
+	}
+
 	user, err := s.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound
@@ -216,6 +273,8 @@ func (s *UserService) GetByID(ctx context.Context, id uint) (*models.User, error
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
+	// Set IsSuperAdmin field
+	user.IsSuperAdmin = s.IsSuperAdmin(user.ID)
 	return user, nil
 }
 
@@ -226,7 +285,17 @@ func (s *UserService) List(ctx context.Context, pagination *models.Pagination) (
 
 // ListWithFilters gets a paginated list of users with search filters
 func (s *UserService) ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error) {
-	return s.userRepo.ListWithFilters(ctx, pagination, filters)
+	users, err := s.userRepo.ListWithFilters(ctx, pagination, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set IsSuperAdmin field for each user
+	for i := range users {
+		users[i].IsSuperAdmin = s.IsSuperAdmin(users[i].ID)
+	}
+
+	return users, nil
 }
 
 // ChangePassword changes a user's password
@@ -271,8 +340,14 @@ func (s *UserService) ChangePassword(ctx context.Context, id uint, req *ChangePa
 
 // UpdateStatus updates a user's status
 func (s *UserService) UpdateStatus(ctx context.Context, id uint, status int) error {
-	user, err := s.userRepo.FindByID(ctx, id)
-	if err != nil {
+	// Prevent status modification of super admin account
+	if s.IsSuperAdmin(id) {
+		return ErrSuperAdminModify
+	}
+
+	// First check if user exists without loading roles
+	var user models.User
+	if err := s.userRepo.GetDB().WithContext(ctx).Select("id", "username", "status").Where("id = ?", id).First(&user).Error; err != nil {
 		return ErrUserNotFound
 	}
 
@@ -280,8 +355,8 @@ func (s *UserService) UpdateStatus(ctx context.Context, id uint, status int) err
 		return ErrInvalidUserStatus
 	}
 
-	user.Status = status
-	if err := s.userRepo.Update(ctx, user); err != nil {
+	// Update only the status field to avoid affecting role associations
+	if err := s.userRepo.GetDB().WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Update("status", status).Error; err != nil {
 		return err
 	}
 
@@ -361,6 +436,11 @@ func (s *UserService) ExportUserList(ctx context.Context, req *ExportUserListReq
 
 // UpdateUserRoles updates a user's role assignments
 func (s *UserService) UpdateUserRoles(ctx context.Context, userID uint, roleIDs []uint) error {
+	// Prevent role modification of super admin account
+	if s.IsSuperAdmin(userID) {
+		return ErrSuperAdminModify
+	}
+
 	return s.userRepo.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Check if user exists
 		user, err := s.userRepo.FindByID(ctx, userID)

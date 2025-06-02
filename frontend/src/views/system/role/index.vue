@@ -32,7 +32,7 @@
         </template>
       </el-table-column>
       
-      <el-table-column label="角色名称">
+      <el-table-column label="角色名称" width="300">
         <template #default="{ row }">
           {{ row.name }}
         </template>

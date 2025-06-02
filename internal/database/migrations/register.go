@@ -40,18 +40,3 @@ func InitMigrations(db *gorm.DB) *Migrator {
 
 	return migrator
 }
-
-// AddPhoneToUsers migration adds phone column to users table
-type AddPhoneToUsers struct{}
-
-func (m *AddPhoneToUsers) Up(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT NULL COMMENT '手机号' AFTER email").Error
-}
-
-func (m *AddPhoneToUsers) Down(db *gorm.DB) error {
-	return db.Exec("ALTER TABLE users DROP COLUMN IF EXISTS phone").Error
-}
-
-func (m *AddPhoneToUsers) File() string {
-	return "2025_06_02_000300_add_phone_to_users.go"
-}

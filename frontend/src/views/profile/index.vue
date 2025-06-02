@@ -19,6 +19,7 @@
               <h2>{{ userInfo.username }}</h2>
               <p class="user-email">{{ userInfo.email }}</p>
               <div class="user-roles">
+                <el-tag v-if="userInfo.is_super_admin" type="warning" effect="dark" class="mb-2">超级管理员</el-tag>
                 <el-tag v-for="role in userInfo.roles" :key="role.id" type="primary" size="small">
                   {{ role.name }}
                 </el-tag>
