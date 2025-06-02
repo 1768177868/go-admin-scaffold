@@ -165,6 +165,23 @@
             <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
+        
+        <el-form-item label="角色" prop="role_ids">
+          <el-select
+            v-model="temp.role_ids"
+            multiple
+            placeholder="请选择角色"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="role in roleList"
+              :key="role.id"
+              :label="role.name"
+              :value="role.id"
+              :disabled="role.code === 'admin' && dialogType === 'create'"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       
       <template #footer>
@@ -182,7 +199,7 @@
 </template>
 
 <script>
-import { getUserList, createUser, updateUser, deleteUser, updateUserStatus } from '@/api/user'
+import { getUserList, createUser, updateUser, deleteUser, updateUserStatus, updateUserRoles } from '@/api/user'
 import { getRoleList } from '@/api/role'
 import Pagination from '@/components/Pagination/index.vue'
 import dayjs from 'dayjs'
@@ -228,7 +245,8 @@ export default {
       email: [
         { required: true, message: '邮箱不能为空', trigger: 'blur' },
         { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-      ]
+      ],
+      role_ids: [{ required: true, message: '请至少选择一个角色', trigger: 'change' }]
     }
 
     const getList = async () => {
@@ -303,8 +321,12 @@ export default {
       dataForm.value.validate(async (valid) => {
         if (valid) {
           try {
-            await createUser(temp)
-            list.value.unshift(Object.assign({}, temp))
+            // 创建用户
+            const { data } = await createUser(temp)
+            // 分配角色
+            if (temp.role_ids.length > 0) {
+              await updateUserRoles(data.id, temp.role_ids)
+            }
             dialogFormVisible.value = false
             ElMessage.success('创建成功')
             getList()
@@ -318,6 +340,7 @@ export default {
 
     const handleUpdate = (row) => {
       Object.assign(temp, row)
+      temp.role_ids = row.roles?.map(role => role.id) || []
       dialogType.value = 'update'
       dialogFormVisible.value = true
       nextTick(() => {
@@ -329,9 +352,12 @@ export default {
       dataForm.value.validate(async (valid) => {
         if (valid) {
           try {
-            await updateUser(temp.id, temp)
-            const index = list.value.findIndex(v => v.id === temp.id)
-            list.value.splice(index, 1, Object.assign({}, temp))
+            const updateData = { ...temp }
+            delete updateData.password // 移除密码字段
+            // 更新用户基本信息
+            await updateUser(temp.id, updateData)
+            // 更新用户角色
+            await updateUserRoles(temp.id, temp.role_ids)
             dialogFormVisible.value = false
             ElMessage.success('更新成功')
             getList()

@@ -59,4 +59,13 @@ export function updateUserStatus(id, status) {
     method: 'put',
     data: { status }
   })
+}
+
+// 更新用户角色
+export function updateUserRoles(id, roleIds) {
+  return request({
+    url: `/admin/v1/users/${id}/roles`,
+    method: 'put',
+    data: { role_ids: roleIds }
+  })
 } 

@@ -84,6 +84,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			users.PUT("/:id", middleware.RBAC("user:edit"), wrapHandler(adminv1.UpdateUser))
 			users.DELETE("/:id", middleware.RBAC("user:delete"), wrapHandler(adminv1.DeleteUser))
 			users.GET("/:id/logs", middleware.RBAC("log:view"), wrapHandler(adminv1.GetUserLogs))
+			users.PUT("/:id/roles", middleware.RBAC("user:edit"), wrapHandler(adminv1.UpdateUserRoles))
 		}
 
 		// Role routes

@@ -192,3 +192,29 @@ func ExportUsers(c *gin.Context) {
 
 	response.Success(c, users)
 }
+
+// UpdateUserRoles handles updating a user's roles
+func UpdateUserRoles(c *gin.Context) {
+	var req struct {
+		RoleIDs []uint `json:"role_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err.Error())
+		return
+	}
+
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.ParamError(c, "Invalid user ID")
+		return
+	}
+
+	userSvc := c.MustGet("userService").(*services.UserService)
+	if err := userSvc.UpdateUserRoles(c.Request.Context(), uint(userID), req.RoleIDs); err != nil {
+		response.BusinessError(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"message": "User roles updated successfully"})
+}

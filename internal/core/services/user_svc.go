@@ -358,3 +358,60 @@ func (s *UserService) ExportUserList(ctx context.Context, req *ExportUserListReq
 
 	return users, nil
 }
+
+// UpdateUserRoles updates a user's role assignments
+func (s *UserService) UpdateUserRoles(ctx context.Context, userID uint, roleIDs []uint) error {
+	return s.userRepo.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Check if user exists
+		user, err := s.userRepo.FindByID(ctx, userID)
+		if err != nil {
+			return ErrUserNotFound
+		}
+
+		// Check if any of the roles is admin role
+		var adminRoleCount int64
+		if err := tx.Model(&models.Role{}).Where("id IN ? AND code = ?", roleIDs, "admin").Count(&adminRoleCount).Error; err != nil {
+			return err
+		}
+
+		// Prevent assigning admin role through this endpoint
+		if adminRoleCount > 0 {
+			return errors.New("cannot assign admin role through this endpoint")
+		}
+
+		// Remove existing role assignments
+		if err := tx.Where("user_id = ?", userID).Delete(&models.UserRole{}).Error; err != nil {
+			return err
+		}
+
+		// Add new role assignments
+		if len(roleIDs) > 0 {
+			userRoles := make([]models.UserRole, 0, len(roleIDs))
+			for _, roleID := range roleIDs {
+				userRoles = append(userRoles, models.UserRole{
+					UserID: userID,
+					RoleID: roleID,
+				})
+			}
+			if err := tx.Create(&userRoles).Error; err != nil {
+				return err
+			}
+		}
+
+		// Record operation log
+		if s.logSvc != nil {
+			s.logSvc.RecordOperationLog(ctx, &models.OperationLog{
+				UserID:       user.ID,
+				Username:     user.Username,
+				Action:       "update_user_roles",
+				Module:       "user",
+				BusinessID:   strconv.FormatUint(uint64(user.ID), 10),
+				BusinessType: "user",
+				Status:       1,
+				ErrorMessage: "",
+			})
+		}
+
+		return nil
+	})
+}
