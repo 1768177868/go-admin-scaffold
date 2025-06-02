@@ -20,8 +20,9 @@ var (
 )
 
 type captchaData struct {
-	code      string
-	createdAt time.Time
+	code         string
+	createdAt    time.Time
+	failAttempts int // 错误尝试次数
 }
 
 func init() {
@@ -47,8 +48,9 @@ func GenerateCaptcha() (string, string, error) {
 	// Store captcha
 	storeMutex.Lock()
 	captchaStore[id] = captchaData{
-		code:      code,
-		createdAt: time.Now(),
+		code:         code,
+		createdAt:    time.Now(),
+		failAttempts: 0,
 	}
 	storeMutex.Unlock()
 
@@ -67,28 +69,39 @@ func GenerateCaptcha() (string, string, error) {
 
 // VerifyCaptcha verifies a captcha code
 func VerifyCaptcha(id, code string) bool {
-	storeMutex.RLock()
-	data, exists := captchaStore[id]
-	storeMutex.RUnlock()
+	storeMutex.Lock()
+	defer storeMutex.Unlock()
 
+	data, exists := captchaStore[id]
 	if !exists {
 		return false
 	}
 
 	// Check if expired (5 minutes)
 	if time.Since(data.createdAt) > 5*time.Minute {
-		storeMutex.Lock()
 		delete(captchaStore, id)
-		storeMutex.Unlock()
 		return false
 	}
 
-	// Remove captcha after verification (one-time use)
-	storeMutex.Lock()
-	delete(captchaStore, id)
-	storeMutex.Unlock()
+	// 检查错误尝试次数是否超过限制（最多3次）
+	if data.failAttempts >= 3 {
+		delete(captchaStore, id)
+		return false
+	}
 
-	return data.code == code
+	// 验证验证码是否正确
+	isValid := data.code == code
+
+	if isValid {
+		// 验证成功，删除验证码（一次性使用）
+		delete(captchaStore, id)
+	} else {
+		// 验证失败，增加失败次数
+		data.failAttempts++
+		captchaStore[id] = data
+	}
+
+	return isValid
 }
 
 func generateRandomString(length int) string {

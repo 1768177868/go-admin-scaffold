@@ -59,6 +59,12 @@ export const asyncRoutes = [
         name: 'Permission',
         component: () => import('@/views/system/permission/index.vue'),
         meta: { title: '权限管理', icon: 'Key', permission: 'permission:view' }
+      },
+      {
+        path: 'menu',
+        name: 'Menu',
+        component: () => import('@/views/system/menu/index.vue'),
+        meta: { title: '菜单管理', icon: 'Menu', permission: 'menu:view' }
       }
     ]
   },
