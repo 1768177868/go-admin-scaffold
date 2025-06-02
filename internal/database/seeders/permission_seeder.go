@@ -151,6 +151,52 @@ func init() {
 					"updated_at":   time.Now(),
 				},
 
+				// 菜单管理权限
+				{
+					"name":         "menu:view",
+					"display_name": "查看菜单",
+					"description":  "查看菜单列表和详情",
+					"module":       "rbac",
+					"action":       "view",
+					"resource":     "menu",
+					"status":       1,
+					"created_at":   time.Now(),
+					"updated_at":   time.Now(),
+				},
+				{
+					"name":         "menu:create",
+					"display_name": "创建菜单",
+					"description":  "创建新菜单",
+					"module":       "rbac",
+					"action":       "create",
+					"resource":     "menu",
+					"status":       1,
+					"created_at":   time.Now(),
+					"updated_at":   time.Now(),
+				},
+				{
+					"name":         "menu:edit",
+					"display_name": "编辑菜单",
+					"description":  "编辑菜单信息",
+					"module":       "rbac",
+					"action":       "edit",
+					"resource":     "menu",
+					"status":       1,
+					"created_at":   time.Now(),
+					"updated_at":   time.Now(),
+				},
+				{
+					"name":         "menu:delete",
+					"display_name": "删除菜单",
+					"description":  "删除菜单",
+					"module":       "rbac",
+					"action":       "delete",
+					"resource":     "menu",
+					"status":       1,
+					"created_at":   time.Now(),
+					"updated_at":   time.Now(),
+				},
+
 				// 系统管理权限
 				{
 					"name":         "dashboard:view",

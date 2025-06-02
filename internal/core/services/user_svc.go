@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -97,14 +96,11 @@ func (s *UserService) IsSuperAdmin(userID uint) bool {
 		return false
 	}
 	superAdminIDs := s.config.ParseSuperAdminIDs()
-	fmt.Printf("DEBUG: Checking user ID %d against super admin IDs %v\n", userID, superAdminIDs)
 	for _, id := range superAdminIDs {
 		if id == userID {
-			fmt.Printf("DEBUG: User ID %d is super admin\n", userID)
 			return true
 		}
 	}
-	fmt.Printf("DEBUG: User ID %d is NOT super admin\n", userID)
 	return false
 }
 

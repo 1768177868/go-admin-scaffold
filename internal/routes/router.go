@@ -114,6 +114,19 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			permissions.GET("/tree", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermissionTree))
 		}
 
+		// Menu routes
+		menus := adminV1Protected.Group("/menus")
+		{
+			menus.GET("", middleware.RBAC("menu:view"), wrapHandler(adminv1.ListMenus))
+			menus.POST("", middleware.RBAC("menu:create"), wrapHandler(adminv1.CreateMenu))
+			menus.GET("/tree", middleware.RBAC("menu:view"), wrapHandler(adminv1.GetMenuTree))
+			menus.GET("/user", wrapHandler(adminv1.GetUserMenus)) // No permission check as it's user's own menus
+			menus.GET("/:id", middleware.RBAC("menu:view"), wrapHandler(adminv1.GetMenu))
+			menus.PUT("/:id", middleware.RBAC("menu:edit"), wrapHandler(adminv1.UpdateMenu))
+			menus.DELETE("/:id", middleware.RBAC("menu:delete"), wrapHandler(adminv1.DeleteMenu))
+			menus.PUT("/:id/roles", middleware.RBAC("menu:edit"), wrapHandler(adminv1.UpdateMenuRoles))
+		}
+
 		// Log routes
 		logs := adminV1Protected.Group("/logs")
 		logs.Use(middleware.RBAC("log:view"))
