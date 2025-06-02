@@ -64,13 +64,28 @@
       
       <el-table-column align="center" label="操作" width="200">
         <template #default="{ row }">
-          <el-button type="primary" size="small" @click="handleUpdate(row)">
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="handleUpdate(row)"
+            :disabled="row.code === 'admin'"
+          >
             编辑
           </el-button>
-          <el-button type="warning" size="small" @click="handlePermission(row)">
+          <el-button 
+            type="warning" 
+            size="small" 
+            @click="handlePermission(row)"
+            :disabled="row.code === 'admin'"
+          >
             权限
           </el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">
+          <el-button 
+            size="small" 
+            type="danger" 
+            @click="handleDelete(row)"
+            :disabled="row.code === 'admin'"
+          >
             删除
           </el-button>
         </template>
@@ -156,7 +171,7 @@
 </template>
 
 <script>
-import { getRoleList, createRole, updateRole, deleteRole } from '@/api/role'
+import { getRoleList, createRole, updateRole, deleteRole, getRoleDetail } from '@/api/role'
 import { getPermissionTree, updateRolePermissions } from '@/api/permission'
 import Pagination from '@/components/Pagination/index.vue'
 import dayjs from 'dayjs'
@@ -273,6 +288,12 @@ export default {
     }
 
     const handleDelete = async (row) => {
+      // 超级管理员不允许删除
+      if (row.code === 'admin') {
+        ElMessage.warning('超级管理员角色不允许删除')
+        return
+      }
+      
       await ElMessageBox.confirm('此操作将永久删除该角色, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -290,6 +311,12 @@ export default {
     }
 
     const handlePermission = async (row) => {
+      // 超级管理员不允许修改权限
+      if (row.code === 'admin') {
+        ElMessage.warning('超级管理员默认拥有所有权限，无需修改')
+        return
+      }
+      
       currentRole.value = row
       try {
         // 获取权限树
@@ -297,7 +324,16 @@ export default {
         permissionTreeData.value = treeData
         
         // 获取角色已有权限
-        checkedPermissions.value = row.permissions?.map(p => p.id) || []
+        const { data: roleData } = await getRoleDetail(row.id)
+        checkedPermissions.value = roleData.permissions?.map(p => p.id) || []
+        
+        // 重置树的选中状态
+        nextTick(() => {
+          if (permissionTree.value) {
+            permissionTree.value.setCheckedKeys([])
+            permissionTree.value.setCheckedKeys(checkedPermissions.value)
+          }
+        })
         
         permissionDialogVisible.value = true
       } catch (error) {
@@ -307,13 +343,32 @@ export default {
 
     const handleSavePermissions = async () => {
       try {
-        const checkedNodes = permissionTree.value.getCheckedNodes()
-        const permissionIds = checkedNodes.map(node => node.id)
+        const checkedNodes = permissionTree.value.getCheckedNodes(false, true) // 只获取叶子节点
+        const halfCheckedNodes = permissionTree.value.getHalfCheckedNodes()
+        
+        // 过滤并合并权限节点
+        const permissionIds = [
+          ...checkedNodes.filter(node => node.id && node.action), // 确保是权限节点（有action属性）
+          ...halfCheckedNodes.filter(node => node.id && node.action)
+        ].map(node => node.id)
+        
+        // 确保有权限被选中
+        if (permissionIds.length === 0) {
+          ElMessage.warning('请至少选择一个权限')
+          return
+        }
         
         await updateRolePermissions(currentRole.value.id, { permission_ids: permissionIds })
+        
+        // 更新当前角色的权限数据
+        const { data: roleData } = await getRoleDetail(currentRole.value.id)
+        const index = list.value.findIndex(v => v.id === currentRole.value.id)
+        if (index !== -1) {
+          list.value[index] = roleData
+        }
+        
         permissionDialogVisible.value = false
         ElMessage.success('权限更新成功')
-        getList()
       } catch (error) {
         console.error('Failed to update permissions:', error)
       }

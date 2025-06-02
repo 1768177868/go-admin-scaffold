@@ -26,53 +26,55 @@
       fit
       highlight-current-row
       row-key="id"
-      :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
     >
-      <el-table-column label="权限名称" min-width="200">
+      <el-table-column label="权限名称" min-width="150">
         <template #default="{ row }">
           <span>{{ row.name }}</span>
         </template>
       </el-table-column>
       
-      <el-table-column label="权限代码" width="200">
+      <el-table-column label="显示名称" min-width="150">
         <template #default="{ row }">
-          <el-tag>{{ row.code }}</el-tag>
+          <span>{{ row.display_name }}</span>
         </template>
       </el-table-column>
       
-      <el-table-column label="类型" width="100">
+      <el-table-column label="所属模块" width="120">
         <template #default="{ row }">
-          <el-tag :type="getPermissionTypeTag(row.type)">
-            {{ getPermissionTypeName(row.type) }}
+          <el-tag type="info">{{ row.module }}</el-tag>
+        </template>
+      </el-table-column>
+      
+      <el-table-column label="操作类型" width="100">
+        <template #default="{ row }">
+          <el-tag :type="getActionTagType(row.action)">{{ row.action }}</el-tag>
+        </template>
+      </el-table-column>
+      
+      <el-table-column label="资源类型" width="120">
+        <template #default="{ row }">
+          <span>{{ row.resource }}</span>
+        </template>
+      </el-table-column>
+      
+      <el-table-column label="状态" width="80" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+            {{ row.status === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
       
-      <el-table-column label="路径" width="200">
+      <el-table-column label="描述" min-width="200">
         <template #default="{ row }">
-          {{ row.path }}
+          <span>{{ row.description }}</span>
         </template>
       </el-table-column>
       
-      <el-table-column label="排序" width="80" align="center">
-        <template #default="{ row }">
-          {{ row.sort }}
-        </template>
-      </el-table-column>
-      
-      <el-table-column label="描述">
-        <template #default="{ row }">
-          {{ row.description }}
-        </template>
-      </el-table-column>
-      
-      <el-table-column align="center" label="操作" width="200">
+      <el-table-column align="center" label="操作" width="150">
         <template #default="{ row }">
           <el-button type="primary" size="small" @click="handleUpdate(row)">
             编辑
-          </el-button>
-          <el-button v-if="row.type === 'menu'" type="success" size="small" @click="handleAddChild(row)">
-            添加子项
           </el-button>
           <el-button size="small" type="danger" @click="handleDelete(row)">
             删除
@@ -95,44 +97,38 @@
         label-width="100px"
         style="width: 500px; margin-left:20px;"
       >
-        <el-form-item label="父级权限" prop="parent_id">
-          <el-tree-select
-            v-model="temp.parent_id"
-            :data="permissionTreeOptions"
-            :props="{ value: 'id', label: 'name', children: 'children' }"
-            placeholder="选择父级权限（可为空）"
-            clearable
-            check-strictly
-            style="width: 100%"
-          />
-        </el-form-item>
-        
         <el-form-item label="权限名称" prop="name">
-          <el-input v-model="temp.name" />
+          <el-input v-model="temp.name" placeholder="如：dashboard:view" />
         </el-form-item>
         
-        <el-form-item label="权限代码" prop="code">
-          <el-input v-model="temp.code" />
+        <el-form-item label="显示名称" prop="display_name">
+          <el-input v-model="temp.display_name" placeholder="如：查看仪表盘" />
         </el-form-item>
         
-        <el-form-item label="权限类型" prop="type">
-          <el-select v-model="temp.type" placeholder="请选择" style="width: 100%">
-            <el-option label="菜单" value="menu" />
-            <el-option label="按钮" value="button" />
-            <el-option label="接口" value="api" />
+        <el-form-item label="所属模块" prop="module">
+          <el-input v-model="temp.module" placeholder="如：dashboard" />
+        </el-form-item>
+        
+        <el-form-item label="操作类型" prop="action">
+          <el-select v-model="temp.action" placeholder="请选择" style="width: 100%">
+            <el-option label="查看" value="view" />
+            <el-option label="创建" value="create" />
+            <el-option label="编辑" value="edit" />
+            <el-option label="删除" value="delete" />
+            <el-option label="导入" value="import" />
+            <el-option label="导出" value="export" />
           </el-select>
         </el-form-item>
         
-        <el-form-item label="路径/接口" prop="path">
-          <el-input v-model="temp.path" placeholder="菜单路径或API接口" />
+        <el-form-item label="资源类型" prop="resource">
+          <el-input v-model="temp.resource" placeholder="如：dashboard" />
         </el-form-item>
         
-        <el-form-item label="图标" prop="icon">
-          <el-input v-model="temp.icon" placeholder="图标名称（仅菜单需要）" />
-        </el-form-item>
-        
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="temp.sort" :min="0" style="width: 100%" />
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="temp.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
         
         <el-form-item label="描述" prop="description">
@@ -155,6 +151,8 @@
 </template>
 
 <script>
+import { ref, reactive, computed, nextTick } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPermissionList, createPermission, updatePermission, deletePermission } from '@/api/permission'
 
 export default {
@@ -166,7 +164,6 @@ export default {
     const listLoading = ref(true)
     const dialogFormVisible = ref(false)
     const dialogType = ref('')
-    const permissionTreeOptions = ref([])
     
     const listQuery = reactive({
       keyword: ''
@@ -174,72 +171,63 @@ export default {
     
     const temp = reactive({
       id: undefined,
-      parent_id: null,
       name: '',
-      code: '',
-      type: 'menu',
-      path: '',
-      icon: '',
-      sort: 0,
-      description: ''
+      display_name: '',
+      description: '',
+      module: '',
+      action: 'view',
+      resource: '',
+      status: 1
     })
 
     const rules = {
       name: [{ required: true, message: '权限名称是必需的', trigger: 'blur' }],
-      code: [{ required: true, message: '权限代码是必需的', trigger: 'blur' }],
-      type: [{ required: true, message: '权限类型是必需的', trigger: 'change' }]
+      display_name: [{ required: true, message: '显示名称是必需的', trigger: 'blur' }],
+      module: [{ required: true, message: '所属模块是必需的', trigger: 'blur' }],
+      action: [{ required: true, message: '操作类型是必需的', trigger: 'change' }],
+      resource: [{ required: true, message: '资源类型是必需的', trigger: 'blur' }]
     }
 
     const dialogTitle = computed(() => {
       return dialogType.value === 'create' ? '添加权限' : '编辑权限'
     })
 
+    // 获取操作类型对应的标签类型
+    const getActionTagType = (action) => {
+      const types = {
+        view: '',
+        create: 'success',
+        edit: 'warning',
+        delete: 'danger',
+        import: 'info',
+        export: 'info'
+      }
+      return types[action] || ''
+    }
+
     const getList = async () => {
       listLoading.value = true
       try {
         const { data } = await getPermissionList(listQuery)
-        list.value = data.items || []
-        
-        // 构建树形选择器选项
-        permissionTreeOptions.value = buildTreeOptions(data.items || [])
+        list.value = data.items
       } catch (error) {
-        console.error('Failed to get permission list:', error)
+        console.error('获取权限列表失败:', error)
       } finally {
         listLoading.value = false
       }
     }
 
-    const buildTreeOptions = (permissions) => {
-      const result = [{ id: null, name: '顶级权限', children: [] }]
-      
-      const buildTree = (items, parentId = null) => {
-        return items
-          .filter(item => item.parent_id === parentId)
-          .map(item => ({
-            id: item.id,
-            name: item.name,
-            children: buildTree(items, item.id)
-          }))
-      }
-      
-      result[0].children = buildTree(permissions)
-      return result
-    }
-
-    const handleFilter = () => {
-      getList()
-    }
-
     const resetTemp = () => {
-      temp.id = undefined
-      temp.parent_id = null
-      temp.name = ''
-      temp.code = ''
-      temp.type = 'menu'
-      temp.path = ''
-      temp.icon = ''
-      temp.sort = 0
-      temp.description = ''
+      Object.assign(temp, {
+        id: undefined,
+        name: '',
+        display_name: '',
+        description: '',
+        module: '',
+        action: 'view',
+        resource: '',
+        status: 1
+      })
     }
 
     const handleCreate = () => {
@@ -247,33 +235,23 @@ export default {
       dialogType.value = 'create'
       dialogFormVisible.value = true
       nextTick(() => {
-        dataForm.value.clearValidate()
-      })
-    }
-
-    const handleAddChild = (row) => {
-      resetTemp()
-      temp.parent_id = row.id
-      dialogType.value = 'create'
-      dialogFormVisible.value = true
-      nextTick(() => {
-        dataForm.value.clearValidate()
+        dataForm.value?.clearValidate()
       })
     }
 
     const createData = async () => {
-      await dataForm.value.validate(async (valid) => {
-        if (valid) {
-          try {
-            await createPermission(temp)
-            dialogFormVisible.value = false
-            ElMessage.success('创建成功')
-            getList()
-          } catch (error) {
-            console.error('Failed to create permission:', error)
-          }
-        }
-      })
+      try {
+        await dataForm.value?.validate()
+        await createPermission(temp)
+        dialogFormVisible.value = false
+        ElMessage({
+          message: '创建成功',
+          type: 'success'
+        })
+        getList()
+      } catch (error) {
+        console.error('创建权限失败:', error)
+      }
     }
 
     const handleUpdate = (row) => {
@@ -281,84 +259,72 @@ export default {
       dialogType.value = 'update'
       dialogFormVisible.value = true
       nextTick(() => {
-        dataForm.value.clearValidate()
+        dataForm.value?.clearValidate()
       })
     }
 
     const updateData = async () => {
-      await dataForm.value.validate(async (valid) => {
-        if (valid) {
-          try {
-            await updatePermission(temp.id, temp)
-            dialogFormVisible.value = false
-            ElMessage.success('更新成功')
-            getList()
-          } catch (error) {
-            console.error('Failed to update permission:', error)
-          }
+      try {
+        await dataForm.value?.validate()
+        await updatePermission(temp.id, temp)
+        dialogFormVisible.value = false
+        ElMessage({
+          message: '更新成功',
+          type: 'success'
+        })
+        getList()
+      } catch (error) {
+        console.error('更新权限失败:', error)
+      }
+    }
+
+    const handleDelete = (row) => {
+      ElMessageBox.confirm(
+        '确定要删除这个权限吗？',
+        '警告',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).then(async () => {
+        try {
+          await deletePermission(row.id)
+          ElMessage({
+            message: '删除成功',
+            type: 'success'
+          })
+          getList()
+        } catch (error) {
+          console.error('删除权限失败:', error)
         }
       })
     }
 
-    const handleDelete = async (row) => {
-      await ElMessageBox.confirm('此操作将永久删除该权限及其子权限, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
-      
-      try {
-        await deletePermission(row.id)
-        ElMessage.success('删除成功')
-        getList()
-      } catch (error) {
-        console.error('Failed to delete permission:', error)
-      }
-    }
-
-    const getPermissionTypeName = (type) => {
-      const types = {
-        menu: '菜单',
-        button: '按钮',
-        api: '接口'
-      }
-      return types[type] || type
-    }
-
-    const getPermissionTypeTag = (type) => {
-      const tags = {
-        menu: 'primary',
-        button: 'success',
-        api: 'warning'
-      }
-      return tags[type] || ''
-    }
-
-    onMounted(() => {
+    const handleFilter = () => {
       getList()
-    })
+    }
+
+    // 初始化
+    getList()
 
     return {
       dataForm,
       list,
       listLoading,
+      listQuery,
       dialogFormVisible,
       dialogType,
       dialogTitle,
-      permissionTreeOptions,
-      listQuery,
       temp,
       rules,
-      getList,
       handleFilter,
       handleCreate,
-      handleAddChild,
-      createData,
       handleUpdate,
-      updateData,
       handleDelete,
-      getPermissionTypeName,
-      getPermissionTypeTag
+      createData,
+      updateData,
+      getActionTagType
     }
   }
 }

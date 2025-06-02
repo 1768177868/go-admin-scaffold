@@ -27,14 +27,23 @@ func (s *RBACService) CheckPermission(ctx context.Context, user interface{}, per
 		return false, nil
 	}
 
-	// Super admin check (user ID = 1 typically has all permissions)
-	if userModel.ID == 1 {
+	// Check if user has admin role
+	var count int64
+	err := s.db.WithContext(ctx).Table("user_roles").
+		Joins("JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND roles.code = 'admin' AND roles.status = 1", userModel.ID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	// Admin role has all permissions
+	if count > 0 {
 		return true, nil
 	}
 
 	// Check if user has the permission through their roles
-	var count int64
-	err := s.db.WithContext(ctx).Table("user_roles").
+	err = s.db.WithContext(ctx).Table("user_roles").
 		Joins("JOIN role_permissions ON user_roles.role_id = role_permissions.role_id").
 		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
 		Joins("JOIN roles ON user_roles.role_id = roles.id").
@@ -51,9 +60,28 @@ func (s *RBACService) CheckPermission(ctx context.Context, user interface{}, per
 
 // GetUserPermissions returns all permissions for a user
 func (s *RBACService) GetUserPermissions(ctx context.Context, userID uint) ([]string, error) {
-	var permissions []string
-
+	// 首先检查用户是否是超级管理员
+	var isAdmin int64
 	err := s.db.WithContext(ctx).Table("user_roles").
+		Joins("JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND roles.code = 'admin' AND roles.status = 1", userID).
+		Count(&isAdmin).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果是超级管理员，返回所有启用的权限
+	if isAdmin > 0 {
+		var allPermissions []string
+		err := s.db.WithContext(ctx).Model(&models.Permission{}).
+			Where("status = 1").
+			Pluck("name", &allPermissions).Error
+		return allPermissions, err
+	}
+
+	// 如果不是超级管理员，返回分配的权限
+	var permissions []string
+	err = s.db.WithContext(ctx).Table("user_roles").
 		Select("DISTINCT permissions.name").
 		Joins("JOIN role_permissions ON user_roles.role_id = role_permissions.role_id").
 		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
@@ -72,11 +100,43 @@ func (s *RBACService) GetUserPermissions(ctx context.Context, userID uint) ([]st
 func (s *RBACService) GetUserRoles(ctx context.Context, userID uint) ([]models.Role, error) {
 	var roles []models.Role
 
-	err := s.db.WithContext(ctx).
-		Preload("Permissions", "status = 1").
-		Joins("JOIN user_roles ON roles.id = user_roles.role_id").
-		Where("user_roles.user_id = ? AND roles.status = 1", userID).
-		Find(&roles).Error
+	// 首先检查用户是否有admin角色
+	var hasAdminRole bool
+	err := s.db.WithContext(ctx).Table("user_roles").
+		Joins("JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND roles.code = 'admin' AND roles.status = 1", userID).
+		Limit(1).Find(&roles).Error
+	if err != nil {
+		return nil, err
+	}
+	hasAdminRole = len(roles) > 0
+
+	if hasAdminRole {
+		// 如果是admin角色，预加载所有启用的权限
+		err = s.db.WithContext(ctx).
+			Preload("Permissions", "status = 1").
+			Joins("JOIN user_roles ON roles.id = user_roles.role_id").
+			Where("user_roles.user_id = ? AND roles.status = 1", userID).
+			Find(&roles).Error
+
+		// 为admin角色添加所有启用的权限
+		for i := range roles {
+			if roles[i].Code == "admin" {
+				var allPermissions []models.Permission
+				if err := s.db.WithContext(ctx).Where("status = 1").Find(&allPermissions).Error; err != nil {
+					return nil, err
+				}
+				roles[i].Permissions = allPermissions
+			}
+		}
+	} else {
+		// 如果不是admin角色，只加载分配的权限
+		err = s.db.WithContext(ctx).
+			Preload("Permissions", "status = 1").
+			Joins("JOIN user_roles ON roles.id = user_roles.role_id").
+			Where("user_roles.user_id = ? AND roles.status = 1", userID).
+			Find(&roles).Error
+	}
 
 	if err != nil {
 		return nil, err

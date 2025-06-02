@@ -4,6 +4,7 @@ import (
 	"app/internal/core/models"
 	"app/internal/core/repositories"
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -97,6 +98,11 @@ func (s *RoleService) Update(ctx context.Context, id uint, req *UpdateRoleReques
 			return err
 		}
 
+		// 禁止修改超级管理员角色
+		if role.Code == "admin" {
+			return errors.New("cannot modify admin role")
+		}
+
 		// Update role fields
 		if req.Name != "" {
 			role.Name = req.Name
@@ -145,6 +151,16 @@ func (s *RoleService) Update(ctx context.Context, id uint, req *UpdateRoleReques
 
 func (s *RoleService) Delete(ctx context.Context, id uint) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 检查是否是超级管理员角色
+		var role models.Role
+		if err := tx.First(&role, id).Error; err != nil {
+			return err
+		}
+
+		if role.Code == "admin" {
+			return errors.New("cannot delete admin role")
+		}
+
 		// Remove role-permission associations
 		if err := tx.Where("role_id = ?", id).Delete(&models.RolePermission{}).Error; err != nil {
 			return err
@@ -189,6 +205,11 @@ func (s *RoleService) UpdatePermissions(ctx context.Context, roleID uint, req *U
 		var role models.Role
 		if err := tx.First(&role, roleID).Error; err != nil {
 			return err
+		}
+
+		// 禁止修改超级管理员角色权限
+		if role.Code == "admin" {
+			return errors.New("cannot modify admin role permissions")
 		}
 
 		// Filter out invalid permission IDs (0 or duplicates)
