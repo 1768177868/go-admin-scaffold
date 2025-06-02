@@ -54,7 +54,7 @@ func (s *PermissionService) List(ctx context.Context, pagination *models.Paginat
 	var permissions []models.Permission
 	var total int64
 
-	query := s.db.WithContext(ctx).Model(&models.Permission{})
+	query := s.db.WithContext(ctx).Model(&models.Permission{}).Where("status = 1")
 
 	// Count total
 	if err := query.Count(&total).Error; err != nil {

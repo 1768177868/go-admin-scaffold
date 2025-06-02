@@ -41,19 +41,10 @@ service.interceptors.response.use(
 
       // 401: 未授权
       if (res.code === 401 || res.code === 10401) {
-        ElMessageBox.confirm(
-          '登录已过期，请重新登录',
-          '确认登出',
-          {
-            confirmButtonText: '重新登录',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }
-        ).then(() => {
-          const authStore = useAuthStore()
-          authStore.resetState()
-          location.reload()
-        })
+        const authStore = useAuthStore()
+        authStore.resetState()
+        // 重定向到登录页
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
       }
       return Promise.reject(new Error(res.message || 'Error'))
     } else {
@@ -70,7 +61,11 @@ service.interceptors.response.use(
           message = '请求错误'
           break
         case 401:
-          message = '未授权，请登录'
+          message = '未授权，请重新登录'
+          // 清除用户状态并跳转到登录页
+          const authStore = useAuthStore()
+          authStore.resetState()
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
           break
         case 403:
           message = '拒绝访问'

@@ -30,6 +30,10 @@ type UpdateRoleRequest struct {
 	PermissionIDs []uint `json:"permission_ids"`
 }
 
+type UpdateRolePermissionsRequest struct {
+	PermissionIDs []uint `json:"permission_ids" binding:"required"`
+}
+
 func NewRoleService(roleRepo *repositories.RoleRepository, db *gorm.DB, logSvc *LogService) *RoleService {
 	return &RoleService{
 		roleRepo: roleRepo,
@@ -168,12 +172,52 @@ func (s *RoleService) assignPermissions(tx *gorm.DB, roleID uint, permissionIDs 
 	return tx.Create(&rolePermissions).Error
 }
 
-// GetRolePermissions returns all permissions for a role
-func (s *RoleService) GetRolePermissions(ctx context.Context, roleID uint) ([]models.Permission, error) {
+// GetPermissions returns all permissions for a role
+func (s *RoleService) GetPermissions(ctx context.Context, roleID uint) ([]models.Permission, error) {
 	var permissions []models.Permission
 	err := s.db.WithContext(ctx).
 		Joins("JOIN role_permissions ON permissions.id = role_permissions.permission_id").
 		Where("role_permissions.role_id = ? AND permissions.status = 1", roleID).
 		Find(&permissions).Error
 	return permissions, err
+}
+
+// UpdatePermissions updates the permissions of a role
+func (s *RoleService) UpdatePermissions(ctx context.Context, roleID uint, req *UpdateRolePermissionsRequest) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Check if role exists
+		var role models.Role
+		if err := tx.First(&role, roleID).Error; err != nil {
+			return err
+		}
+
+		// Filter out invalid permission IDs (0 or duplicates)
+		validPermIDs := make([]uint, 0)
+		seen := make(map[uint]bool)
+		for _, id := range req.PermissionIDs {
+			if id > 0 && !seen[id] {
+				// Check if permission exists
+				var count int64
+				if err := tx.Model(&models.Permission{}).Where("id = ? AND status = 1", id).Count(&count).Error; err != nil {
+					return err
+				}
+				if count > 0 {
+					validPermIDs = append(validPermIDs, id)
+					seen[id] = true
+				}
+			}
+		}
+
+		// Remove existing permissions
+		if err := tx.Where("role_id = ?", roleID).Delete(&models.RolePermission{}).Error; err != nil {
+			return err
+		}
+
+		// Add new permissions
+		if len(validPermIDs) > 0 {
+			return s.assignPermissions(tx, roleID, validPermIDs)
+		}
+
+		return nil
+	})
 }

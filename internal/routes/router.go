@@ -94,6 +94,8 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			roles.GET("/:id", middleware.RBAC("role:view"), wrapHandler(adminv1.GetRole))
 			roles.PUT("/:id", middleware.RBAC("role:edit"), wrapHandler(adminv1.UpdateRole))
 			roles.DELETE("/:id", middleware.RBAC("role:delete"), wrapHandler(adminv1.DeleteRole))
+			roles.GET("/:id/permissions", middleware.RBAC("role:view"), wrapHandler(adminv1.GetRolePermissions))
+			roles.PUT("/:id/permissions", middleware.RBAC("role:edit"), wrapHandler(adminv1.UpdateRolePermissions))
 		}
 
 		// Permission routes
