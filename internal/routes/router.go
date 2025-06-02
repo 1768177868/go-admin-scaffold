@@ -53,6 +53,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		{
 			auth.GET("/captcha", wrapHandler(adminv1.GetCaptcha))
 			auth.POST("/login", wrapHandler(adminv1.Login))
+			auth.POST("/logout", middleware.JWT(), wrapHandler(adminv1.Logout))
 			auth.POST("/refresh", middleware.JWT(), wrapHandler(adminv1.RefreshToken))
 		}
 

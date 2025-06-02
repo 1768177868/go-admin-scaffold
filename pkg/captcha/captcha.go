@@ -8,6 +8,7 @@ import (
 	"image/draw"
 	"image/png"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 )
@@ -88,7 +89,7 @@ func VerifyCaptcha(id, code string) bool {
 	delete(captchaStore, id)
 	storeMutex.Unlock()
 
-	return data.code == code
+	return strings.EqualFold(data.code, code)
 }
 
 func generateRandomString(length int) string {

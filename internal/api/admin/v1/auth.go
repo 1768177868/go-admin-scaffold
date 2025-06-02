@@ -78,3 +78,27 @@ func RefreshToken(c *gin.Context) {
 		"expires_in":   authSvc.GetConfig().JWT.ExpireTime,
 	})
 }
+
+// Logout handles user logout requests
+func Logout(c *gin.Context) {
+	// Get user from context (set by JWT middleware)
+	user, exists := c.Get("user")
+	if !exists {
+		response.UnauthorizedError(c)
+		return
+	}
+
+	userModel := user.(*models.User)
+	authSvc := c.MustGet("authService").(*services.AuthService)
+
+	// Log the logout action
+	err := authSvc.Logout(c.Request.Context(), userModel.ID)
+	if err != nil {
+		// Even if logout logging fails, we still consider logout successful
+		// as the client-side token will be removed
+		response.Success(c, gin.H{"message": "logged out successfully"})
+		return
+	}
+
+	response.Success(c, gin.H{"message": "logged out successfully"})
+}

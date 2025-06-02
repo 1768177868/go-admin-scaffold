@@ -186,3 +186,19 @@ func (s *AuthService) RefreshToken(ctx context.Context, userID uint) (string, er
 func (s *AuthService) GetConfig() *config.Config {
 	return s.config
 }
+
+// Logout handles user logout and logs the action
+func (s *AuthService) Logout(ctx context.Context, userID uint) error {
+	// Get user information for logging
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Record logout in login logs
+	if s.logSvc != nil {
+		return s.logSvc.RecordLoginLog(ctx, user.ID, user.Username, "", "", 1, "logout successful")
+	}
+
+	return nil
+}
