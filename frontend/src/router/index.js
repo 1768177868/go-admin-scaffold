@@ -128,9 +128,10 @@ router.beforeEach(async (to, from, next) => {
       if (!authStore.userInfo?.id) {
         try {
           await authStore.getUserInfo()
-          next()
+          next({ ...to, replace: true })
         } catch (error) {
           console.error('获取用户信息失败:', error)
+          // 清除token并跳转到登录页
           authStore.resetState()
           next(`/login?redirect=${to.path}`)
           NProgress.done()

@@ -98,20 +98,8 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 			roles.GET("/:id", middleware.RBAC("role:view"), wrapHandler(adminv1.GetRole))
 			roles.PUT("/:id", middleware.RBAC("role:edit"), wrapHandler(adminv1.UpdateRole))
 			roles.DELETE("/:id", middleware.RBAC("role:delete"), wrapHandler(adminv1.DeleteRole))
-			roles.GET("/:id/permissions", middleware.RBAC("role:view"), wrapHandler(adminv1.GetRolePermissions))
-			roles.PUT("/:id/permissions", middleware.RBAC("role:edit"), wrapHandler(adminv1.UpdateRolePermissions))
-		}
-
-		// Permission routes
-		permissions := adminV1Protected.Group("/permissions")
-		{
-			permissions.GET("", middleware.RBAC("permission:view"), wrapHandler(adminv1.ListPermissions))
-			permissions.POST("", middleware.RBAC("permission:create"), wrapHandler(adminv1.CreatePermission))
-			permissions.GET("/:id", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermission))
-			permissions.PUT("/:id", middleware.RBAC("permission:edit"), wrapHandler(adminv1.UpdatePermission))
-			permissions.DELETE("/:id", middleware.RBAC("permission:delete"), wrapHandler(adminv1.DeletePermission))
-			permissions.GET("/modules", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermissionsByModule))
-			permissions.GET("/tree", middleware.RBAC("permission:view"), wrapHandler(adminv1.GetPermissionTree))
+			roles.GET("/:id/menus", middleware.RBAC("role:view"), wrapHandler(adminv1.GetRoleMenus))
+			roles.PUT("/:id/menus", middleware.RBAC("role:edit"), wrapHandler(adminv1.UpdateRoleMenus))
 		}
 
 		// Menu routes
@@ -152,8 +140,8 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config) {
 		// Profile routes (accessible to all authenticated users)
 		profile := adminV1Protected.Group("/profile")
 		{
-			profile.GET("", middleware.RBAC("profile:view"), wrapHandler(adminv1.GetCurrentUser))
-			profile.PUT("", middleware.RBAC("profile:edit"), wrapHandler(adminv1.UpdateCurrentUser))
+			profile.GET("", wrapHandler(adminv1.GetCurrentUser))
+			profile.PUT("", wrapHandler(adminv1.UpdateCurrentUser))
 		}
 
 		// 创建存储实例

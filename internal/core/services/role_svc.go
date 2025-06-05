@@ -2,7 +2,6 @@ package services
 
 import (
 	"app/internal/core/models"
-	"app/internal/core/repositories"
 	"context"
 	"errors"
 
@@ -10,41 +9,55 @@ import (
 )
 
 type RoleService struct {
-	roleRepo *repositories.RoleRepository
-	db       *gorm.DB
-	logSvc   *LogService
+	db *gorm.DB
 }
 
 type CreateRoleRequest struct {
-	Name          string `json:"name" binding:"required"`
-	Code          string `json:"code" binding:"required"`
-	Description   string `json:"description"`
-	Status        int    `json:"status"`
-	PermissionIDs []uint `json:"permission_ids"`
+	Name        string `json:"name" binding:"required"`
+	Code        string `json:"code" binding:"required"`
+	Description string `json:"description"`
+	Status      int    `json:"status"`
+	MenuIDs     []uint `json:"menu_ids"`
 }
 
 type UpdateRoleRequest struct {
-	Name          string `json:"name"`
-	Code          string `json:"code"`
-	Description   string `json:"description"`
-	Status        int    `json:"status"`
-	PermissionIDs []uint `json:"permission_ids"`
+	Name        string `json:"name"`
+	Code        string `json:"code"`
+	Description string `json:"description"`
+	Status      int    `json:"status"`
+	MenuIDs     []uint `json:"menu_ids"`
 }
 
-type UpdateRolePermissionsRequest struct {
-	PermissionIDs []uint `json:"permission_ids" binding:"required"`
+type UpdateRoleMenusRequest struct {
+	MenuIDs []uint `json:"menu_ids" binding:"required"`
 }
 
-func NewRoleService(roleRepo *repositories.RoleRepository, db *gorm.DB, logSvc *LogService) *RoleService {
+func NewRoleService(db *gorm.DB) *RoleService {
 	return &RoleService{
-		roleRepo: roleRepo,
-		db:       db,
-		logSvc:   logSvc,
+		db: db,
 	}
 }
 
 func (s *RoleService) List(ctx context.Context, pagination *models.Pagination) ([]models.Role, error) {
-	return s.roleRepo.List(ctx, pagination)
+	var roles []models.Role
+	var total int64
+
+	query := s.db.WithContext(ctx).Model(&models.Role{}).Preload("Menus")
+
+	// Count total
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// Apply pagination
+	if pagination != nil {
+		offset := (pagination.Page - 1) * pagination.PageSize
+		query = query.Offset(offset).Limit(pagination.PageSize)
+		pagination.Total = total
+	}
+
+	err := query.Find(&roles).Error
+	return roles, err
 }
 
 func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*models.Role, error) {
@@ -62,15 +75,15 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*mode
 			return err
 		}
 
-		// Assign permissions
-		if len(req.PermissionIDs) > 0 {
-			if err := s.assignPermissions(tx, role.ID, req.PermissionIDs); err != nil {
+		// Assign menus
+		if len(req.MenuIDs) > 0 {
+			if err := s.assignMenus(tx, role.ID, req.MenuIDs); err != nil {
 				return err
 			}
 		}
 
-		// Load permissions
-		if err := tx.Preload("Permissions").First(role, role.ID).Error; err != nil {
+		// Load menus
+		if err := tx.Preload("Menus").First(role, role.ID).Error; err != nil {
 			return err
 		}
 
@@ -83,7 +96,7 @@ func (s *RoleService) Create(ctx context.Context, req *CreateRoleRequest) (*mode
 
 func (s *RoleService) GetByID(ctx context.Context, id uint) (*models.Role, error) {
 	var role models.Role
-	err := s.db.WithContext(ctx).Preload("Permissions").First(&role, id).Error
+	err := s.db.WithContext(ctx).Preload("Menus").First(&role, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +111,7 @@ func (s *RoleService) Update(ctx context.Context, id uint, req *UpdateRoleReques
 			return err
 		}
 
-		// 禁止修改超级管理员角色
-		if role.Code == "admin" {
-			return errors.New("cannot modify admin role")
-		}
-
-		// Update role fields
+		// Update basic fields
 		if req.Name != "" {
 			role.Name = req.Name
 		}
@@ -117,28 +125,19 @@ func (s *RoleService) Update(ctx context.Context, id uint, req *UpdateRoleReques
 			role.Status = req.Status
 		}
 
-		// Save role
 		if err := tx.Save(&role).Error; err != nil {
 			return err
 		}
 
-		// Update permissions if provided
-		if req.PermissionIDs != nil {
-			// Remove existing permissions
-			if err := tx.Where("role_id = ?", role.ID).Delete(&models.RolePermission{}).Error; err != nil {
+		// Update menu associations if provided
+		if req.MenuIDs != nil {
+			if err := s.assignMenus(tx, role.ID, req.MenuIDs); err != nil {
 				return err
-			}
-
-			// Add new permissions
-			if len(req.PermissionIDs) > 0 {
-				if err := s.assignPermissions(tx, role.ID, req.PermissionIDs); err != nil {
-					return err
-				}
 			}
 		}
 
-		// Load permissions
-		if err := tx.Preload("Permissions").First(&role, role.ID).Error; err != nil {
+		// Reload with menus
+		if err := tx.Preload("Menus").First(&role, role.ID).Error; err != nil {
 			return err
 		}
 
@@ -161,8 +160,8 @@ func (s *RoleService) Delete(ctx context.Context, id uint) error {
 			return errors.New("cannot delete admin role")
 		}
 
-		// Remove role-permission associations
-		if err := tx.Where("role_id = ?", id).Delete(&models.RolePermission{}).Error; err != nil {
+		// Remove role-menu associations
+		if err := tx.Where("role_id = ?", id).Delete(&models.RoleMenu{}).Error; err != nil {
 			return err
 		}
 
@@ -176,30 +175,40 @@ func (s *RoleService) Delete(ctx context.Context, id uint) error {
 	})
 }
 
-// assignPermissions assigns permissions to a role
-func (s *RoleService) assignPermissions(tx *gorm.DB, roleID uint, permissionIDs []uint) error {
-	var rolePermissions []models.RolePermission
-	for _, permID := range permissionIDs {
-		rolePermissions = append(rolePermissions, models.RolePermission{
-			RoleID:       roleID,
-			PermissionID: permID,
-		})
+// assignMenus assigns menus to a role
+func (s *RoleService) assignMenus(tx *gorm.DB, roleID uint, menuIDs []uint) error {
+	// Remove existing associations
+	if err := tx.Where("role_id = ?", roleID).Delete(&models.RoleMenu{}).Error; err != nil {
+		return err
 	}
-	return tx.Create(&rolePermissions).Error
+
+	// Add new associations
+	if len(menuIDs) > 0 {
+		var roleMenus []models.RoleMenu
+		for _, menuID := range menuIDs {
+			roleMenus = append(roleMenus, models.RoleMenu{
+				RoleID: roleID,
+				MenuID: menuID,
+			})
+		}
+		return tx.Create(&roleMenus).Error
+	}
+
+	return nil
 }
 
-// GetPermissions returns all permissions for a role
-func (s *RoleService) GetPermissions(ctx context.Context, roleID uint) ([]models.Permission, error) {
-	var permissions []models.Permission
+// GetMenus returns all menus for a role
+func (s *RoleService) GetMenus(ctx context.Context, roleID uint) ([]models.Menu, error) {
+	var menus []models.Menu
 	err := s.db.WithContext(ctx).
-		Joins("JOIN role_permissions ON permissions.id = role_permissions.permission_id").
-		Where("role_permissions.role_id = ? AND permissions.status = 1", roleID).
-		Find(&permissions).Error
-	return permissions, err
+		Joins("JOIN role_menus ON menus.id = role_menus.menu_id").
+		Where("role_menus.role_id = ? AND menus.status = 1", roleID).
+		Find(&menus).Error
+	return menus, err
 }
 
-// UpdatePermissions updates the permissions of a role
-func (s *RoleService) UpdatePermissions(ctx context.Context, roleID uint, req *UpdateRolePermissionsRequest) error {
+// UpdateMenus updates the menus of a role
+func (s *RoleService) UpdateMenus(ctx context.Context, roleID uint, req *UpdateRoleMenusRequest) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Check if role exists
 		var role models.Role
@@ -207,38 +216,7 @@ func (s *RoleService) UpdatePermissions(ctx context.Context, roleID uint, req *U
 			return err
 		}
 
-		// 禁止修改超级管理员角色权限
-		if role.Code == "admin" {
-			return errors.New("cannot modify admin role permissions")
-		}
-
-		// Filter out invalid permission IDs (0 or duplicates)
-		validPermIDs := make([]uint, 0)
-		seen := make(map[uint]bool)
-		for _, id := range req.PermissionIDs {
-			if id > 0 && !seen[id] {
-				// Check if permission exists
-				var count int64
-				if err := tx.Model(&models.Permission{}).Where("id = ? AND status = 1", id).Count(&count).Error; err != nil {
-					return err
-				}
-				if count > 0 {
-					validPermIDs = append(validPermIDs, id)
-					seen[id] = true
-				}
-			}
-		}
-
-		// Remove existing permissions
-		if err := tx.Where("role_id = ?", roleID).Delete(&models.RolePermission{}).Error; err != nil {
-			return err
-		}
-
-		// Add new permissions
-		if len(validPermIDs) > 0 {
-			return s.assignPermissions(tx, roleID, validPermIDs)
-		}
-
-		return nil
+		// Update menu associations
+		return s.assignMenus(tx, roleID, req.MenuIDs)
 	})
 }

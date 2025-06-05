@@ -24,13 +24,12 @@ type Menu struct {
 	Permission string `json:"permission" gorm:"size:100;comment:'权限标识'"`
 
 	// Meta 信息 (JSON)
-	Meta MenuMeta `json:"meta" gorm:"type:json;comment:'菜单元信息'"`
+	Meta string `json:"meta" gorm:"type:json;comment:'菜单元信息'"`
 
 	// 关联
-	Parent      *Menu            `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
-	Children    []*Menu          `json:"children,omitempty" gorm:"foreignKey:ParentID"`
-	Roles       []Role           `json:"roles,omitempty" gorm:"many2many:role_menus;"`
-	Permissions []MenuPermission `json:"permissions,omitempty" gorm:"foreignKey:MenuID"`
+	Parent   *Menu   `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
+	Children []*Menu `json:"children,omitempty" gorm:"foreignKey:ParentID"`
+	Roles    []Role  `json:"roles,omitempty" gorm:"many2many:role_menus;"`
 
 	// 时间戳
 	CreatedAt CustomTime     `json:"created_at" gorm:"type:timestamp"`
@@ -40,14 +39,15 @@ type Menu struct {
 
 // MenuMeta represents menu metadata
 type MenuMeta struct {
-	Title      string `json:"title"`      // 菜单标题
-	Icon       string `json:"icon"`       // 菜单图标
-	Hidden     bool   `json:"hidden"`     // 是否隐藏
-	AlwaysShow bool   `json:"alwaysShow"` // 是否总是显示
-	NoCache    bool   `json:"noCache"`    // 是否不缓存
-	Affix      bool   `json:"affix"`      // 是否固定标签
-	Breadcrumb bool   `json:"breadcrumb"` // 是否显示面包屑
-	ActiveMenu string `json:"activeMenu"` // 激活菜单
+	Title      string `json:"title"`
+	Icon       string `json:"icon,omitempty"`
+	Hidden     bool   `json:"hidden,omitempty"`
+	AlwaysShow bool   `json:"alwaysShow,omitempty"`
+	NoCache    bool   `json:"noCache,omitempty"`
+	Affix      bool   `json:"affix,omitempty"`
+	Breadcrumb bool   `json:"breadcrumb,omitempty"`
+	ActiveMenu string `json:"activeMenu,omitempty"`
+	KeepAlive  bool   `json:"keepAlive,omitempty"`
 }
 
 // TableName specifies the table name for Menu model
@@ -55,17 +55,22 @@ func (Menu) TableName() string {
 	return "menus"
 }
 
-// IsVisible returns true if the menu is visible
-func (m *Menu) IsVisible() bool {
-	return m.Visible == 1 && m.Status == 1
-}
-
-// IsMenu returns true if it's a menu (not a button)
+// IsMenu returns true if this is a menu (not a button)
 func (m *Menu) IsMenu() bool {
 	return m.Type == 1
 }
 
-// IsButton returns true if it's a button
+// IsButton returns true if this is a button
 func (m *Menu) IsButton() bool {
 	return m.Type == 2
+}
+
+// IsVisible returns true if the menu is visible
+func (m *Menu) IsVisible() bool {
+	return m.Visible == 1
+}
+
+// IsActive returns true if the menu is active
+func (m *Menu) IsActive() bool {
+	return m.Status == 1
 }

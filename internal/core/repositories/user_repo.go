@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"context"
+	"log"
 
+	"app/internal/config"
 	"app/internal/core/models"
 	"app/internal/core/types"
 
@@ -11,12 +13,18 @@ import (
 
 type UserRepository struct {
 	*BaseRepository
+	config *config.Config
 }
 
 func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{
 		BaseRepository: NewBaseRepository(db),
 	}
+}
+
+// SetConfig sets the config instance
+func (r *UserRepository) SetConfig(config *config.Config) {
+	r.config = config
 }
 
 // FindByUsername retrieves a user by username
@@ -73,14 +81,28 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint) (*models.User, e
 	var user models.User
 	err := r.db.WithContext(ctx).
 		Preload("Roles", func(db *gorm.DB) *gorm.DB {
-			// Ensure distinct roles to prevent duplicates
-			return db.Distinct()
+			// Only load active roles
+			return db.Where("status = ?", 1).Distinct()
 		}).
 		Where("id = ?", id).
 		First(&user).Error
 	if err != nil {
+		log.Printf("[ERROR] Failed to find user by ID %d: %v", id, err)
 		return nil, err
 	}
+
+	// Set IsSuperAdmin field using config
+	if r.config != nil {
+		superAdminIDs := r.config.ParseSuperAdminIDs()
+		for _, adminID := range superAdminIDs {
+			if adminID == user.ID {
+				user.IsSuperAdmin = true
+				break
+			}
+		}
+	}
+
+	log.Printf("[DEBUG] Found user %d with %d roles, IsSuperAdmin: %v", user.ID, len(user.Roles), user.IsSuperAdmin)
 	return &user, nil
 }
 

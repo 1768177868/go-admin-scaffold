@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
@@ -23,18 +24,6 @@ var (
 	ErrSuperAdminDelete  = errors.New("super admin account cannot be deleted")
 )
 
-type UserRepository interface {
-	FindByUsername(ctx context.Context, username string) (*models.User, error)
-	FindByEmail(ctx context.Context, email string) (*models.User, error)
-	FindByID(ctx context.Context, id uint) (*models.User, error)
-	ListWithRoles(ctx context.Context, pagination *models.Pagination) ([]models.User, error)
-	ListWithFilters(ctx context.Context, pagination *models.Pagination, filters *types.UserSearchFilters) ([]models.User, error)
-	Create(ctx context.Context, user *models.User) error
-	Update(ctx context.Context, user *models.User) error
-	Delete(ctx context.Context, id uint) error
-	GetDB() *gorm.DB
-}
-
 type LogServiceInterface interface {
 	RecordOperationLog(ctx context.Context, log *models.OperationLog) error
 	RecordLoginLog(ctx context.Context, userID uint, username, ip, userAgent string, status int, message string) error
@@ -42,9 +31,14 @@ type LogServiceInterface interface {
 	GetUserOperationHistory(ctx context.Context, userID uint, limit int) ([]models.OperationLog, error)
 }
 
+type AuthServiceInterface interface {
+	IsSuperAdmin(userID uint) bool
+}
+
 type UserService struct {
 	userRepo UserRepository
 	logSvc   LogServiceInterface
+	authSvc  AuthServiceInterface
 	config   *config.Config
 }
 
@@ -54,6 +48,11 @@ func NewUserService(userRepo UserRepository, logSvc LogServiceInterface, config 
 		logSvc:   logSvc,
 		config:   config,
 	}
+}
+
+// SetAuthService sets the auth service instance
+func (s *UserService) SetAuthService(authSvc AuthServiceInterface) {
+	s.authSvc = authSvc
 }
 
 type CreateUserRequest struct {
@@ -92,15 +91,22 @@ type ExportUserListRequest struct {
 
 // IsSuperAdmin checks if a user ID is in the super admin list
 func (s *UserService) IsSuperAdmin(userID uint) bool {
+	if s.authSvc != nil {
+		return s.authSvc.IsSuperAdmin(userID)
+	}
 	if s.config == nil {
+		log.Printf("[ERROR] Config is nil when checking super admin for user %d", userID)
 		return false
 	}
 	superAdminIDs := s.config.ParseSuperAdminIDs()
+	// log.Printf("[DEBUG] Checking if user %d is super admin. Super admin IDs: %v", userID, superAdminIDs)
 	for _, id := range superAdminIDs {
 		if id == userID {
+			log.Printf("[DEBUG] User %d is super admin", userID)
 			return true
 		}
 	}
+	log.Printf("[DEBUG] User %d is not super admin", userID)
 	return false
 }
 
@@ -131,7 +137,39 @@ func (s *UserService) Create(ctx context.Context, req *CreateUserRequest) (*mode
 		Status:   req.Status,
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	// Use transaction to ensure both user creation and role assignment succeed
+	err = s.userRepo.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Create user
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
+
+		// If no roles specified, assign default user role
+		if len(req.RoleIDs) == 0 {
+			var userRole models.Role
+			if err := tx.Where("code = ?", "user").First(&userRole).Error; err != nil {
+				return err
+			}
+			req.RoleIDs = []uint{userRole.ID}
+		}
+
+		// Create user-role associations
+		userRoles := make([]models.UserRole, 0, len(req.RoleIDs))
+		for _, roleID := range req.RoleIDs {
+			userRoles = append(userRoles, models.UserRole{
+				UserID: user.ID,
+				RoleID: roleID,
+			})
+		}
+		if err := tx.Create(&userRoles).Error; err != nil {
+			return err
+		}
+
+		// Load roles for the user
+		return tx.Preload("Roles").First(user, user.ID).Error
+	})
+
+	if err != nil {
 		return nil, err
 	}
 

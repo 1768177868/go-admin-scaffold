@@ -337,6 +337,24 @@ const handleAddChild = (row) => {
 const handleEdit = async (row) => {
   try {
     const { data } = await menuApi.getMenu(row.id)
+    // 如果 meta 是字符串，则解析为对象
+    if (typeof data.meta === 'string') {
+      try {
+        data.meta = JSON.parse(data.meta)
+      } catch (e) {
+        console.warn('Failed to parse meta JSON:', e)
+        data.meta = {
+          title: data.title,
+          icon: data.icon,
+          hidden: data.visible === 0,
+          alwaysShow: false,
+          noCache: !data.keep_alive,
+          affix: false,
+          breadcrumb: true,
+          activeMenu: ''
+        }
+      }
+    }
     Object.assign(form, data)
     isEdit.value = true
     dialogVisible.value = true
@@ -377,10 +395,27 @@ const handleSubmit = async () => {
     
     submitLoading.value = true
     
+    // 确保 meta 是对象
+    if (typeof form.meta === 'string') {
+      try {
+        form.meta = JSON.parse(form.meta)
+      } catch (e) {
+        form.meta = {}
+      }
+    }
+    
     // 更新 meta 信息
-    form.meta.title = form.title
-    form.meta.icon = form.icon
-    form.meta.hidden = form.visible === 0
+    form.meta = {
+      ...form.meta,
+      title: form.title,
+      icon: form.icon,
+      hidden: form.visible === 0,
+      alwaysShow: false,
+      noCache: !form.keep_alive,
+      affix: false,
+      breadcrumb: true,
+      activeMenu: ''
+    }
     
     if (isEdit.value) {
       await menuApi.updateMenu(form.id, form)
@@ -394,7 +429,7 @@ const handleSubmit = async () => {
     await getMenuList()
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error('提交失败')
+    ElMessage.error('提交失败: ' + error.message)
   } finally {
     submitLoading.value = false
   }

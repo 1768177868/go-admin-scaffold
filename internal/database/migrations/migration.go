@@ -118,9 +118,29 @@ func (m *Migrator) RunPending() error {
 		executedNames[migration.Name] = true
 	}
 
-	// Run pending migrations in registration order
+	// Count pending migrations
+	pendingCount := 0
 	for _, migration := range m.migrations {
 		if !executedNames[migration.Name] {
+			pendingCount++
+		}
+	}
+
+	if pendingCount == 0 {
+		fmt.Printf("✅ \033[32mNo pending migrations found\033[0m\n")
+		return nil
+	}
+
+	fmt.Printf("🚀 \033[34mRunning %d pending migration(s)...\033[0m\n", pendingCount)
+	fmt.Println("────────────────────────────────────────")
+
+	// Run pending migrations in registration order
+	currentIndex := 0
+	for _, migration := range m.migrations {
+		if !executedNames[migration.Name] {
+			currentIndex++
+			fmt.Printf("📄 \033[33m[%d/%d]\033[0m %s", currentIndex, pendingCount, migration.Name)
+
 			// Begin transaction
 			err := m.db.Transaction(func(tx *gorm.DB) error {
 				// Run migration
@@ -137,13 +157,16 @@ func (m *Migrator) RunPending() error {
 			})
 
 			if err != nil {
+				fmt.Printf(" \033[31m✗ FAILED\033[0m\n")
 				return fmt.Errorf("failed to run migration %s: %w", migration.Name, err)
 			}
 
-			fmt.Printf("Migrated: %s\n", migration.Name)
+			fmt.Printf(" \033[32m✓ COMPLETED\033[0m\n")
 		}
 	}
 
+	fmt.Println("────────────────────────────────────────")
+	fmt.Printf("🎉 \033[32mAll migrations completed successfully!\033[0m\n")
 	return nil
 }
 
@@ -154,12 +177,27 @@ func (m *Migrator) Rollback() error {
 		return err
 	}
 
+	if lastBatch == 0 {
+		fmt.Printf("ℹ️  \033[33mNo migrations to rollback\033[0m\n")
+		return nil
+	}
+
 	var migrations []MigrationRecord
 	if err := m.db.Where("batch = ?", lastBatch).Order("id DESC").Find(&migrations).Error; err != nil {
 		return err
 	}
 
-	for _, migration := range migrations {
+	if len(migrations) == 0 {
+		fmt.Printf("ℹ️  \033[33mNo migrations found for batch %d\033[0m\n", lastBatch)
+		return nil
+	}
+
+	fmt.Printf("🔄 \033[34mRolling back %d migration(s) from batch %d...\033[0m\n", len(migrations), lastBatch)
+	fmt.Println("────────────────────────────────────────")
+
+	for i, migration := range migrations {
+		fmt.Printf("📄 \033[33m[%d/%d]\033[0m %s", i+1, len(migrations), migration.Name)
+
 		// Find the migration definition
 		var def Migration
 		for _, m := range m.migrations {
@@ -181,13 +219,18 @@ func (m *Migrator) Rollback() error {
 			})
 
 			if err != nil {
+				fmt.Printf(" \033[31m✗ FAILED\033[0m\n")
 				return fmt.Errorf("failed to rollback migration %s: %w", migration.Name, err)
 			}
 
-			fmt.Printf("Rolled back: %s\n", migration.Name)
+			fmt.Printf(" \033[32m✓ ROLLED BACK\033[0m\n")
+		} else {
+			fmt.Printf(" \033[33m⚠ SKIPPED (definition not found)\033[0m\n")
 		}
 	}
 
+	fmt.Println("────────────────────────────────────────")
+	fmt.Printf("🎉 \033[32mRollback completed successfully!\033[0m\n")
 	return nil
 }
 
@@ -198,7 +241,17 @@ func (m *Migrator) Reset() error {
 		return err
 	}
 
-	for _, migration := range migrations {
+	if len(migrations) == 0 {
+		fmt.Printf("ℹ️  \033[33mNo migrations to reset\033[0m\n")
+		return nil
+	}
+
+	fmt.Printf("🔥 \033[34mResetting %d migration(s)...\033[0m\n", len(migrations))
+	fmt.Println("────────────────────────────────────────")
+
+	for i, migration := range migrations {
+		fmt.Printf("📄 \033[33m[%d/%d]\033[0m %s", i+1, len(migrations), migration.Name)
+
 		// Find the migration definition
 		var def Migration
 		for _, m := range m.migrations {
@@ -217,21 +270,32 @@ func (m *Migrator) Reset() error {
 			})
 
 			if err != nil {
+				fmt.Printf(" \033[31m✗ FAILED\033[0m\n")
 				return fmt.Errorf("failed to reset migration %s: %w", migration.Name, err)
 			}
 
-			fmt.Printf("Reset: %s\n", migration.Name)
+			fmt.Printf(" \033[32m✓ RESET\033[0m\n")
+		} else {
+			fmt.Printf(" \033[33m⚠ SKIPPED (definition not found)\033[0m\n")
 		}
 	}
 
+	fmt.Println("────────────────────────────────────────")
+	fmt.Printf("🎉 \033[32mReset completed successfully!\033[0m\n")
 	return nil
 }
 
 // Refresh resets and reruns all migrations
 func (m *Migrator) Refresh() error {
+	fmt.Printf("🔄 \033[34mRefreshing migrations (Reset + Run)...\033[0m\n")
+	fmt.Println("════════════════════════════════════════")
+
+	fmt.Printf("📋 \033[33mStep 1: Resetting all migrations\033[0m\n")
 	if err := m.Reset(); err != nil {
 		return err
 	}
+
+	fmt.Printf("\n📋 \033[33mStep 2: Running all migrations\033[0m\n")
 	return m.RunPending()
 }
 

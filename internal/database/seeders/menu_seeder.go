@@ -30,11 +30,11 @@ func init() {
 			dashboardMeta, _ := json.Marshal(MenuMeta{
 				Title:      "仪表盘",
 				Icon:       "Odometer",
-				Affix:      true,
 				Breadcrumb: true,
+				Affix:      true,
 			})
 
-			// System management menu
+			// System management parent menu
 			systemMeta, _ := json.Marshal(MenuMeta{
 				Title:      "系统管理",
 				Icon:       "Setting",
@@ -56,13 +56,6 @@ func init() {
 				Breadcrumb: true,
 			})
 
-			// Permission management menu
-			permissionMeta, _ := json.Marshal(MenuMeta{
-				Title:      "权限管理",
-				Icon:       "Key",
-				Breadcrumb: true,
-			})
-
 			// Menu management menu
 			menuMeta, _ := json.Marshal(MenuMeta{
 				Title:      "菜单管理",
@@ -70,7 +63,7 @@ func init() {
 				Breadcrumb: true,
 			})
 
-			// Log management menu
+			// Log management parent menu
 			logMeta, _ := json.Marshal(MenuMeta{
 				Title:      "日志管理",
 				Icon:       "Document",
@@ -92,7 +85,7 @@ func init() {
 				Breadcrumb: true,
 			})
 
-			// Profile menu
+			// Profile menu (hidden)
 			profileMeta, _ := json.Marshal(MenuMeta{
 				Title:      "个人中心",
 				Icon:       "User",
@@ -101,8 +94,8 @@ func init() {
 			})
 
 			menus := []map[string]interface{}{
-				// Dashboard
 				{
+					"id":         1,
 					"name":       "Dashboard",
 					"title":      "仪表盘",
 					"icon":       "Odometer",
@@ -113,16 +106,15 @@ func init() {
 					"type":       1,
 					"visible":    1,
 					"status":     1,
-					"keep_alive": false,
+					"keep_alive": true,
 					"external":   false,
 					"permission": "dashboard:view",
 					"meta":       string(dashboardMeta),
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// System Management - Parent Menu
 				{
+					"id":         2,
 					"name":       "System",
 					"title":      "系统管理",
 					"icon":       "Setting",
@@ -140,15 +132,14 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// User Management
 				{
+					"id":         3,
 					"name":       "User",
 					"title":      "用户管理",
 					"icon":       "User",
 					"path":       "user",
 					"component":  "@/views/system/user/index.vue",
-					"parent_id":  2, // System parent ID will be 2
+					"parent_id":  2,
 					"sort":       1,
 					"type":       1,
 					"visible":    1,
@@ -160,9 +151,8 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Role Management
 				{
+					"id":         4,
 					"name":       "Role",
 					"title":      "角色管理",
 					"icon":       "UserFilled",
@@ -180,36 +170,15 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Permission Management
 				{
-					"name":       "Permission",
-					"title":      "权限管理",
-					"icon":       "Key",
-					"path":       "permission",
-					"component":  "@/views/system/permission/index.vue",
-					"parent_id":  2,
-					"sort":       3,
-					"type":       1,
-					"visible":    1,
-					"status":     1,
-					"keep_alive": false,
-					"external":   false,
-					"permission": "permission:view",
-					"meta":       string(permissionMeta),
-					"created_at": time.Now(),
-					"updated_at": time.Now(),
-				},
-
-				// Menu Management
-				{
+					"id":         6,
 					"name":       "Menu",
 					"title":      "菜单管理",
 					"icon":       "Menu",
 					"path":       "menu",
 					"component":  "@/views/system/menu/index.vue",
 					"parent_id":  2,
-					"sort":       4,
+					"sort":       3,
 					"type":       1,
 					"visible":    1,
 					"status":     1,
@@ -220,9 +189,8 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Log Management - Parent Menu
 				{
+					"id":         7,
 					"name":       "Log",
 					"title":      "日志管理",
 					"icon":       "Document",
@@ -240,15 +208,14 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Login Log
 				{
+					"id":         8,
 					"name":       "LoginLog",
 					"title":      "登录日志",
 					"icon":       "Key",
 					"path":       "login",
 					"component":  "@/views/log/login/index.vue",
-					"parent_id":  7, // Log parent ID will be 7
+					"parent_id":  7,
 					"sort":       1,
 					"type":       1,
 					"visible":    1,
@@ -260,9 +227,8 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Operation Log
 				{
+					"id":         9,
 					"name":       "OperationLog",
 					"title":      "操作日志",
 					"icon":       "Document",
@@ -280,9 +246,8 @@ func init() {
 					"created_at": time.Now(),
 					"updated_at": time.Now(),
 				},
-
-				// Profile
 				{
+					"id":         10,
 					"name":       "Profile",
 					"title":      "个人中心",
 					"icon":       "User",
@@ -291,7 +256,7 @@ func init() {
 					"parent_id":  nil,
 					"sort":       4,
 					"type":       1,
-					"visible":    0, // Hidden
+					"visible":    0, // Hidden menu
 					"status":     1,
 					"keep_alive": false,
 					"external":   false,
@@ -302,7 +267,22 @@ func init() {
 				},
 			}
 
-			return tx.Table("menus").Create(menus).Error
+			// Use REPLACE INTO to handle existing data
+			for _, menu := range menus {
+				if err := tx.Table("menus").Where("id = ?", menu["id"]).First(&map[string]interface{}{}).Error; err != nil {
+					// Menu doesn't exist, create it
+					if err := tx.Table("menus").Create(menu).Error; err != nil {
+						return err
+					}
+				} else {
+					// Menu exists, update it
+					if err := tx.Table("menus").Where("id = ?", menu["id"]).Updates(menu).Error; err != nil {
+						return err
+					}
+				}
+			}
+
+			return nil
 		},
 	})
 }

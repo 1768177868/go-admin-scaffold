@@ -11,8 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// ListRoles handles the request to get a paginated list of roles
+// ListRoles handles the request to list roles
 func ListRoles(c *gin.Context) {
+	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
@@ -60,7 +61,11 @@ func GetRole(c *gin.Context) {
 	roleSvc := c.MustGet("roleService").(*services.RoleService)
 	role, err := roleSvc.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
-		response.NotFoundError(c)
+		if err == gorm.ErrRecordNotFound {
+			response.NotFoundError(c)
+			return
+		}
+		response.Error(c, response.CodeServerError, "failed to fetch role")
 		return
 	}
 
@@ -108,148 +113,115 @@ func DeleteRole(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// RolePermissionResponse represents the response for role permissions
-type RolePermissionResponse struct {
-	PermissionTree []PermissionTreeNode `json:"permission_tree"`
+// RoleMenuResponse represents the response for role menus
+type RoleMenuResponse struct {
+	MenuTree []MenuTreeNode `json:"menu_tree"`
 }
 
-// PermissionTreeNode represents a node in the permission tree
-type PermissionTreeNode struct {
-	ID          uint                 `json:"id"`
-	Name        string               `json:"name"`
-	DisplayName string               `json:"display_name"`
-	Description string               `json:"description"`
-	Module      string               `json:"module"`
-	Action      string               `json:"action"`
-	Resource    string               `json:"resource"`
-	Status      int                  `json:"status"`
-	Assigned    bool                 `json:"assigned"`
-	Children    []PermissionTreeNode `json:"children,omitempty"`
+// MenuTreeNode represents a node in the menu tree
+type MenuTreeNode struct {
+	ID       uint           `json:"id"`
+	MenuID   uint           `json:"menu_id"`
+	Name     string         `json:"name"`
+	Title    string         `json:"title"`
+	Icon     string         `json:"icon"`
+	Path     string         `json:"path"`
+	Status   int            `json:"status"`
+	Assigned bool           `json:"assigned"`
+	Children []MenuTreeNode `json:"children,omitempty"`
 }
 
-// GetRolePermissions handles the request to get permissions of a role
-func GetRolePermissions(c *gin.Context) {
+// GetRoleMenus handles the request to get menus of a role
+func GetRoleMenus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.ParamError(c, "invalid role ID")
 		return
 	}
 
+	menuSvc := c.MustGet("menuService").(*services.MenuService)
 	roleSvc := c.MustGet("roleService").(*services.RoleService)
-	permissionSvc := c.MustGet("permissionService").(*services.PermissionService)
 
-	// Get all permissions
-	allPermissions, err := permissionSvc.List(c.Request.Context(), &models.Pagination{
-		Page:     1,
-		PageSize: 1000, // 设置一个较大的数，获取所有权限
-	})
+	// Get all menus
+	allMenus, err := menuSvc.GetAll(c.Request.Context())
 	if err != nil {
-		response.Error(c, response.CodeServerError, "failed to get permissions")
+		response.Error(c, response.CodeServerError, "failed to get menus")
 		return
 	}
 
-	// Get role's permissions
-	rolePermissions, err := roleSvc.GetPermissions(c.Request.Context(), uint(id))
+	// Get role's menus
+	roleMenus, err := roleSvc.GetMenus(c.Request.Context(), uint(id))
 	if err != nil {
-		response.Error(c, response.CodeServerError, "failed to get role permissions")
+		response.Error(c, response.CodeServerError, "failed to get role menus")
 		return
 	}
 
-	// Create a map for quick lookup of assigned permissions
+	// Create a map for quick lookup of assigned menus
 	assignedMap := make(map[uint]bool)
-	for _, p := range rolePermissions {
-		assignedMap[p.ID] = true
+	for _, menu := range roleMenus {
+		assignedMap[menu.ID] = true
 	}
 
-	// Group permissions by module
-	moduleMap := make(map[string][]PermissionTreeNode)
-	for _, p := range allPermissions {
-		// Skip disabled permissions
-		if p.Status != 1 {
-			continue
-		}
-		node := PermissionTreeNode{
-			ID:          p.ID,
-			Name:        p.Name,
-			DisplayName: p.DisplayName,
-			Description: p.Description,
-			Module:      p.Module,
-			Action:      p.Action,
-			Resource:    p.Resource,
-			Status:      p.Status,
-			Assigned:    assignedMap[p.ID],
-		}
-		moduleMap[p.Module] = append(moduleMap[p.Module], node)
-	}
-
-	// Create tree structure
-	var result RolePermissionResponse
-	result.PermissionTree = make([]PermissionTreeNode, 0)
-
-	// Create module nodes
-	for module, permissions := range moduleMap {
-		// Calculate if module should be assigned based on children
-		moduleAssigned := true
-		for _, p := range permissions {
-			if !p.Assigned {
-				moduleAssigned = false
-				break
-			}
-		}
-
-		moduleNode := PermissionTreeNode{
-			Name:        module,
-			DisplayName: module, // You might want to map this to a proper display name
-			Module:      module,
-			Assigned:    moduleAssigned,
-			Children:    permissions,
-		}
-		result.PermissionTree = append(result.PermissionTree, moduleNode)
-	}
+	// Build menu tree
+	var result RoleMenuResponse
+	result.MenuTree = buildMenuTree(allMenus, assignedMap, nil)
 
 	response.Success(c, result)
 }
 
-// UpdateRolePermissions handles the request to update permissions of a role
-func UpdateRolePermissions(c *gin.Context) {
+// UpdateRoleMenus handles the request to update menus of a role
+func UpdateRoleMenus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.ParamError(c, "invalid role ID")
 		return
 	}
 
-	var req services.UpdateRolePermissionsRequest
+	var req services.UpdateRoleMenusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ValidationError(c, err.Error())
 		return
 	}
 
-	// Filter out invalid permission IDs
-	validIDs := make([]uint, 0)
-	for _, pid := range req.PermissionIDs {
-		if pid > 0 {
-			validIDs = append(validIDs, pid)
-		}
-	}
-
-	// Update request with valid IDs
-	req.PermissionIDs = validIDs
-
-	// Validate that we have at least one valid permission ID
-	if len(req.PermissionIDs) == 0 {
-		response.ValidationError(c, "no valid permission IDs provided")
-		return
-	}
-
 	roleSvc := c.MustGet("roleService").(*services.RoleService)
-	if err := roleSvc.UpdatePermissions(c.Request.Context(), uint(id), &req); err != nil {
+	if err := roleSvc.UpdateMenus(c.Request.Context(), uint(id), &req); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.NotFoundError(c)
 			return
 		}
-		response.Error(c, response.CodeServerError, "failed to update role permissions: "+err.Error())
+		response.Error(c, response.CodeServerError, "failed to update role menus: "+err.Error())
 		return
 	}
 
 	response.Success(c, nil)
+}
+
+// Helper function to build menu tree
+func buildMenuTree(allMenus []models.Menu, assignedMap map[uint]bool, parentID *uint) []MenuTreeNode {
+	var nodes []MenuTreeNode
+
+	for _, menu := range allMenus {
+		// Skip disabled menus
+		if menu.Status != 1 {
+			continue
+		}
+
+		// Check if this menu belongs to the current parent level
+		if (parentID == nil && menu.ParentID == nil) || (parentID != nil && menu.ParentID != nil && *menu.ParentID == *parentID) {
+			node := MenuTreeNode{
+				ID:       menu.ID,
+				MenuID:   menu.ID,
+				Name:     menu.Name,
+				Title:    menu.Title,
+				Icon:     menu.Icon,
+				Path:     menu.Path,
+				Status:   menu.Status,
+				Assigned: assignedMap[menu.ID],
+				Children: buildMenuTree(allMenus, assignedMap, &menu.ID),
+			}
+			nodes = append(nodes, node)
+		}
+	}
+
+	return nodes
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -322,10 +323,15 @@ func getEnvBoolOrDefault(key string, defaultValue bool) bool {
 // ParseSuperAdminIDs converts string IDs to uint
 func (c *Config) ParseSuperAdminIDs() []uint {
 	var ids []uint
+	log.Printf("[DEBUG] Parsing super admin IDs from config: %v", c.SuperAdmin.UserIDs)
 	for _, idStr := range c.SuperAdmin.UserIDs {
 		if id, err := strconv.ParseUint(idStr, 10, 32); err == nil {
 			ids = append(ids, uint(id))
+			log.Printf("[DEBUG] Successfully parsed super admin ID: %d", id)
+		} else {
+			log.Printf("[ERROR] Failed to parse super admin ID %s: %v", idStr, err)
 		}
 	}
+	log.Printf("[DEBUG] Final parsed super admin IDs: %v", ids)
 	return ids
 }

@@ -132,6 +132,8 @@ export default {
           loading.value = true
           try {
             await authStore.login(loginForm)
+            // 登录成功后获取用户信息
+            await authStore.getUserInfo()
             ElMessage.success('登录成功')
             
             // 跳转到目标页面

@@ -37,6 +37,8 @@
 
 <script>
 import path from 'path-browserify'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLink from './AppLink.vue'
 
 export default {
@@ -59,9 +61,14 @@ export default {
     }
   },
   setup(props) {
+    const route = useRoute()
     const onlyOneChild = ref({})
 
     function hasOneShowingChild(children = [], parent) {
+      if (!children) {
+        return false
+      }
+
       const showingChildren = children.filter(item => {
         if (item.meta?.hidden) {
           return false

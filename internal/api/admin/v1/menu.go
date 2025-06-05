@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"log"
 	"strconv"
 
+	"app/internal/core/models"
 	"app/internal/core/services"
 	"app/pkg/response"
 
@@ -67,19 +69,33 @@ func GetMenuTree(c *gin.Context) {
 // @Security Bearer
 // @Router /admin/v1/menus/user [get]
 func GetUserMenus(c *gin.Context) {
-	userID, exists := c.Get("user_id")
+	log.Printf("[DEBUG] GetUserMenus handler called")
+
+	user, exists := c.Get("user")
 	if !exists {
+		log.Printf("[ERROR] User not found in context")
 		response.UnauthorizedError(c)
 		return
 	}
 
+	userModel, ok := user.(*models.User)
+	if !ok {
+		log.Printf("[ERROR] Failed to cast user to User model")
+		response.UnauthorizedError(c)
+		return
+	}
+
+	log.Printf("[DEBUG] Getting menus for user ID: %d, IsSuperAdmin: %v", userModel.ID, userModel.IsSuperAdmin)
+
 	menuSvc := c.MustGet("menuService").(*services.MenuService)
-	menus, err := menuSvc.GetUserMenus(c.Request.Context(), userID.(uint))
+	menus, err := menuSvc.GetUserMenus(c.Request.Context(), userModel.ID)
 	if err != nil {
+		log.Printf("[ERROR] Failed to get user menus: %v", err)
 		response.Error(c, response.CodeServerError, "failed to fetch user menus")
 		return
 	}
 
+	log.Printf("[DEBUG] Got %d menus for user %d", len(menus), userModel.ID)
 	response.Success(c, menus)
 }
 

@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"app/internal/core/models"
-	"app/internal/core/repositories"
 )
 
 type LogService struct {
-	logRepo *repositories.LogRepository
+	logRepo LogRepository
 }
 
-func NewLogService(logRepo *repositories.LogRepository) *LogService {
+func NewLogService(logRepo LogRepository) *LogService {
 	return &LogService{
 		logRepo: logRepo,
 	}

@@ -31,8 +31,8 @@
 </template>
 
 <script>
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { constantRoutes, asyncRoutes } from '@/router'
 import SidebarItem from './SidebarItem.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -56,43 +56,10 @@ export default {
       return path
     })
 
-    // 计算可见的路由
+    // 使用后端返回的菜单数据
     const routes = computed(() => {
-      const permissions = authStore.userPermissions
-      const allRoutes = [...constantRoutes, ...asyncRoutes]
-      return filterMenuRoutes(allRoutes, permissions)
+      return authStore.userMenus
     })
-
-    // 过滤菜单路由
-    function filterMenuRoutes(routes, permissions) {
-      const res = []
-      routes.forEach(route => {
-        const tmp = { ...route }
-        
-        // 隐藏的路由不显示在菜单中
-        if (tmp.meta?.hidden) {
-          return
-        }
-
-        // 检查权限
-        if (hasPermission(permissions, tmp)) {
-          if (tmp.children) {
-            tmp.children = filterMenuRoutes(tmp.children, permissions)
-          }
-          res.push(tmp)
-        }
-      })
-      return res
-    }
-
-    // 权限检查
-    function hasPermission(permissions, route) {
-      if (route.meta && route.meta.permission) {
-        return permissions.some(permission => permission === route.meta.permission)
-      } else {
-        return true
-      }
-    }
 
     return {
       collapse,

@@ -1,7 +1,8 @@
 import axios from 'axios'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
+import { useAuthStore } from '@/stores/auth'
+import router from '@/router'
 
 // 创建axios实例
 const service = axios.create({
@@ -20,8 +21,7 @@ service.interceptors.request.use(
     return config
   },
   error => {
-    // 对请求错误做些什么
-    console.log(error)
+    console.error('Request error:', error)
     return Promise.reject(error)
   }
 )
@@ -39,12 +39,10 @@ service.interceptors.response.use(
         duration: 5 * 1000
       })
 
-      // 401: 未授权
-      if (res.code === 401 || res.code === 10401) {
-        const authStore = useAuthStore()
-        authStore.resetState()
-        // 重定向到登录页
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+      // 401: 未授权，需要重新登录
+      if (res.code === 401 || res.code === 10401 || res.code === 10005) {
+        handleUnauthorized()
+        return Promise.reject(new Error(res.message || 'Unauthorized'))
       }
       return Promise.reject(new Error(res.message || 'Error'))
     } else {
@@ -52,62 +50,42 @@ service.interceptors.response.use(
     }
   },
   error => {
-    console.log('err' + error)
-    let message = error.message
-
-    if (error.response) {
-      switch (error.response.status) {
-        case 400:
-          message = '请求错误'
-          break
-        case 401:
-          message = '未授权，请重新登录'
-          // 清除用户状态并跳转到登录页
-          const authStore = useAuthStore()
-          authStore.resetState()
-          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
-          break
-        case 403:
-          message = '拒绝访问'
-          break
-        case 404:
-          message = `请求地址出错: ${error.response.config.url}`
-          break
-        case 408:
-          message = '请求超时'
-          break
-        case 500:
-          message = '服务器内部错误'
-          break
-        case 501:
-          message = '服务未实现'
-          break
-        case 502:
-          message = '网关错误'
-          break
-        case 503:
-          message = '服务不可用'
-          break
-        case 504:
-          message = '网关超时'
-          break
-        case 505:
-          message = 'HTTP版本不受支持'
-          break
-        default:
-          message = `连接错误${error.response.status}`
-      }
+    console.error('Response error:', error)
+    
+    // 处理 401 错误或自定义未授权错误码
+    if (
+      error.response && (
+        error.response.status === 401 || 
+        error.response.data?.code === 401 ||
+        error.response.data?.code === 10005
+      )
+    ) {
+      handleUnauthorized()
     } else {
-      message = '连接到服务器失败'
+      ElMessage({
+        message: error.message || '请求失败',
+        type: 'error',
+        duration: 5 * 1000
+      })
     }
-
-    ElMessage({
-      message: message,
-      type: 'error',
-      duration: 5 * 1000
-    })
     return Promise.reject(error)
   }
 )
+
+// 处理未授权的情况
+function handleUnauthorized() {
+  const authStore = useAuthStore()
+  
+  // 先重置状态
+  authStore.resetState()
+  
+  // 强制重定向到登录页，不保留当前路径
+  router.replace('/login')
+  
+  ElMessage({
+    message: '登录已过期，请重新登录',
+    type: 'warning'
+  })
+}
 
 export default service 

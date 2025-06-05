@@ -17,27 +17,31 @@ func ServiceInjection(cfg *config.Config) gin.HandlerFunc {
 		// Initialize repositories
 		userRepo := repositories.NewUserRepository(db)
 		logRepo := repositories.NewLogRepository(db)
-		roleRepo := repositories.NewRoleRepository(db)
 		todoRepo := repositories.NewTodoRepository(db)
 		menuRepo := repositories.NewMenuRepository(db)
 
+		// Set config in userRepo
+		userRepo.SetConfig(cfg)
+
 		// Initialize services
 		logSvc := services.NewLogService(logRepo)
-		authSvc := services.NewAuthService(userRepo, logSvc, cfg)
 		userSvc := services.NewUserService(userRepo, logSvc, cfg)
+		authSvc := services.NewAuthService(userRepo, logSvc, cfg)
 		rbacSvc := services.NewRBACService(db)
-		roleSvc := services.NewRoleService(roleRepo, db, logSvc)
-		permissionSvc := services.NewPermissionService(db)
+		roleSvc := services.NewRoleService(db)
 		todoService := services.NewTodoService(todoRepo)
 		menuSvc := services.NewMenuService(menuRepo, userRepo)
 
+		// Set up service dependencies
+		userSvc.SetAuthService(authSvc)
+		rbacSvc.SetAuthService(authSvc)
+
 		// Inject services into context
-		c.Set("authService", authSvc)
-		c.Set("userService", userSvc)
 		c.Set("logService", logSvc)
+		c.Set("userService", userSvc)
+		c.Set("authService", authSvc)
 		c.Set("rbacService", rbacSvc)
 		c.Set("roleService", roleSvc)
-		c.Set("permissionService", permissionSvc)
 		c.Set("todoService", todoService)
 		c.Set("menuService", menuSvc)
 

@@ -9,7 +9,8 @@ import (
 
 // RBACService handles role-based access control
 type RBACService struct {
-	db *gorm.DB
+	db      *gorm.DB
+	authSvc AuthServiceInterface
 }
 
 // NewRBACService creates a new RBAC service instance
@@ -19,12 +20,22 @@ func NewRBACService(db *gorm.DB) *RBACService {
 	}
 }
 
+// SetAuthService sets the auth service instance
+func (s *RBACService) SetAuthService(authSvc AuthServiceInterface) {
+	s.authSvc = authSvc
+}
+
 // CheckPermission checks if a user has the specified permission
 func (s *RBACService) CheckPermission(ctx context.Context, user interface{}, permission string) (bool, error) {
 	// Type assertion to get user model
 	userModel, ok := user.(*models.User)
 	if !ok {
 		return false, nil
+	}
+
+	// Check if user is super admin using auth service
+	if s.authSvc != nil && s.authSvc.IsSuperAdmin(userModel.ID) {
+		return true, nil
 	}
 
 	// Check if user has admin role
@@ -42,12 +53,12 @@ func (s *RBACService) CheckPermission(ctx context.Context, user interface{}, per
 		return true, nil
 	}
 
-	// Check if user has the permission through their roles
+	// Check if user has the permission through their role-menu associations
 	err = s.db.WithContext(ctx).Table("user_roles").
-		Joins("JOIN role_permissions ON user_roles.role_id = role_permissions.role_id").
-		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+		Joins("JOIN role_menus ON user_roles.role_id = role_menus.role_id").
+		Joins("JOIN menus ON role_menus.menu_id = menus.id").
 		Joins("JOIN roles ON user_roles.role_id = roles.id").
-		Where("user_roles.user_id = ? AND permissions.name = ? AND permissions.status = 1 AND roles.status = 1",
+		Where("user_roles.user_id = ? AND menus.permission = ? AND menus.status = 1 AND menus.visible = 1 AND roles.status = 1",
 			userModel.ID, permission).
 		Count(&count).Error
 
@@ -60,7 +71,16 @@ func (s *RBACService) CheckPermission(ctx context.Context, user interface{}, per
 
 // GetUserPermissions returns all permissions for a user
 func (s *RBACService) GetUserPermissions(ctx context.Context, userID uint) ([]string, error) {
-	// 首先检查用户是否是超级管理员
+	// Check if user is super admin using auth service
+	if s.authSvc != nil && s.authSvc.IsSuperAdmin(userID) {
+		var allPermissions []string
+		err := s.db.WithContext(ctx).Model(&models.Menu{}).
+			Where("status = 1 AND visible = 1 AND permission != ''").
+			Pluck("permission", &allPermissions).Error
+		return allPermissions, err
+	}
+
+	// 检查用户是否是管理员
 	var isAdmin int64
 	err := s.db.WithContext(ctx).Table("user_roles").
 		Joins("JOIN roles ON user_roles.role_id = roles.id").
@@ -70,24 +90,24 @@ func (s *RBACService) GetUserPermissions(ctx context.Context, userID uint) ([]st
 		return nil, err
 	}
 
-	// 如果是超级管理员，返回所有启用的权限
+	// 如果是管理员，返回所有启用的权限
 	if isAdmin > 0 {
 		var allPermissions []string
-		err := s.db.WithContext(ctx).Model(&models.Permission{}).
-			Where("status = 1").
-			Pluck("name", &allPermissions).Error
+		err := s.db.WithContext(ctx).Model(&models.Menu{}).
+			Where("status = 1 AND visible = 1 AND permission != ''").
+			Pluck("permission", &allPermissions).Error
 		return allPermissions, err
 	}
 
-	// 如果不是超级管理员，返回分配的权限
+	// 如果不是超级管理员或管理员，返回分配的权限
 	var permissions []string
 	err = s.db.WithContext(ctx).Table("user_roles").
-		Select("DISTINCT permissions.name").
-		Joins("JOIN role_permissions ON user_roles.role_id = role_permissions.role_id").
-		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+		Select("DISTINCT menus.permission").
+		Joins("JOIN role_menus ON user_roles.role_id = role_menus.role_id").
+		Joins("JOIN menus ON role_menus.menu_id = menus.id").
 		Joins("JOIN roles ON user_roles.role_id = roles.id").
-		Where("user_roles.user_id = ? AND permissions.status = 1 AND roles.status = 1", userID).
-		Pluck("permissions.name", &permissions).Error
+		Where("user_roles.user_id = ? AND menus.status = 1 AND menus.visible = 1 AND menus.permission != '' AND roles.status = 1", userID).
+		Pluck("menus.permission", &permissions).Error
 
 	if err != nil {
 		return nil, err
@@ -96,9 +116,12 @@ func (s *RBACService) GetUserPermissions(ctx context.Context, userID uint) ([]st
 	return permissions, nil
 }
 
-// GetUserRoles returns all roles for a user with their permissions
+// GetUserRoles returns all roles for a user with their menus
 func (s *RBACService) GetUserRoles(ctx context.Context, userID uint) ([]models.Role, error) {
 	var roles []models.Role
+
+	// Check if user is super admin using auth service
+	isSuperAdmin := s.authSvc != nil && s.authSvc.IsSuperAdmin(userID)
 
 	// 首先检查用户是否有admin角色
 	var hasAdminRole bool
@@ -111,28 +134,28 @@ func (s *RBACService) GetUserRoles(ctx context.Context, userID uint) ([]models.R
 	}
 	hasAdminRole = len(roles) > 0
 
-	if hasAdminRole {
-		// 如果是admin角色，预加载所有启用的权限
+	if hasAdminRole || isSuperAdmin {
+		// 如果是admin角色或超级管理员，预加载所有启用的菜单
 		err = s.db.WithContext(ctx).
-			Preload("Permissions", "status = 1").
+			Preload("Menus", "status = 1 AND visible = 1").
 			Joins("JOIN user_roles ON roles.id = user_roles.role_id").
 			Where("user_roles.user_id = ? AND roles.status = 1", userID).
 			Find(&roles).Error
 
-		// 为admin角色添加所有启用的权限
+		// 为admin角色或超级管理员添加所有启用的菜单
 		for i := range roles {
-			if roles[i].Code == "admin" {
-				var allPermissions []models.Permission
-				if err := s.db.WithContext(ctx).Where("status = 1").Find(&allPermissions).Error; err != nil {
+			if roles[i].Code == "admin" || isSuperAdmin {
+				var allMenus []models.Menu
+				if err := s.db.WithContext(ctx).Where("status = 1 AND visible = 1").Find(&allMenus).Error; err != nil {
 					return nil, err
 				}
-				roles[i].Permissions = allPermissions
+				roles[i].Menus = allMenus
 			}
 		}
 	} else {
-		// 如果不是admin角色，只加载分配的权限
+		// 如果不是admin角色或超级管理员，只加载分配的菜单
 		err = s.db.WithContext(ctx).
-			Preload("Permissions", "status = 1").
+			Preload("Menus", "status = 1 AND visible = 1").
 			Joins("JOIN user_roles ON roles.id = user_roles.role_id").
 			Where("user_roles.user_id = ? AND roles.status = 1", userID).
 			Find(&roles).Error
@@ -146,17 +169,44 @@ func (s *RBACService) GetUserRoles(ctx context.Context, userID uint) ([]models.R
 }
 
 // HasAnyPermission checks if user has any of the specified permissions
-func (s *RBACService) HasAnyPermission(ctx context.Context, user interface{}, permissions []string) (bool, error) {
-	for _, perm := range permissions {
-		has, err := s.CheckPermission(ctx, user, perm)
-		if err != nil {
-			return false, err
-		}
-		if has {
-			return true, nil
-		}
+func (s *RBACService) HasAnyPermission(ctx context.Context, userID uint, permissions []string) (bool, error) {
+	if len(permissions) == 0 {
+		return false, nil
 	}
-	return false, nil
+
+	// Check if user is super admin
+	if s.authSvc != nil && s.authSvc.IsSuperAdmin(userID) {
+		return true, nil
+	}
+
+	// Check if user has admin role
+	var count int64
+	err := s.db.WithContext(ctx).Table("user_roles").
+		Joins("JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND roles.code = 'admin' AND roles.status = 1", userID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	}
+
+	// Check if user has any of the specified permissions through role-menu associations
+	err = s.db.WithContext(ctx).Table("user_roles").
+		Joins("JOIN role_menus ON user_roles.role_id = role_menus.role_id").
+		Joins("JOIN menus ON role_menus.menu_id = menus.id").
+		Joins("JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND menus.permission IN ? AND menus.status = 1 AND menus.visible = 1 AND roles.status = 1",
+			userID, permissions).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 // HasAllPermissions checks if user has all of the specified permissions
