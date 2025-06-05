@@ -41,17 +41,18 @@ func (s *StringSlice) Scan(value interface{}) error {
 
 // Role represents a user role in the system
 type Role struct {
-	ID          uint           `json:"id" gorm:"primarykey"`
-	Name        string         `json:"name" gorm:"size:50;not null;comment:'角色名称'"`
-	Code        string         `json:"code" gorm:"size:50;not null;unique;comment:'角色编码'"`
-	Description string         `json:"description" gorm:"size:255;comment:'角色描述'"`
-	Status      int            `json:"status" gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
-	PermList    StringSlice    `json:"perm_list" gorm:"type:json"`
-	CreatedAt   CustomTime     `json:"created_at" gorm:"type:timestamp"`
-	UpdatedAt   CustomTime     `json:"updated_at" gorm:"type:timestamp"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index;type:timestamp"`
-	Users       []User         `json:"users,omitempty" gorm:"many2many:user_roles;"`
-	Permissions []Permission   `json:"permissions,omitempty" gorm:"many2many:role_permissions;"`
+	ID              uint             `json:"id" gorm:"primarykey"`
+	Name            string           `json:"name" gorm:"size:50;not null;comment:'角色名称'"`
+	Code            string           `json:"code" gorm:"size:50;not null;unique;comment:'角色编码'"`
+	Description     string           `json:"description" gorm:"size:255;comment:'角色描述'"`
+	Status          int              `json:"status" gorm:"default:1;comment:'状态：0-禁用，1-启用'"`
+	PermList        StringSlice      `json:"perm_list" gorm:"type:json"`
+	CreatedAt       CustomTime       `json:"created_at" gorm:"type:timestamp"`
+	UpdatedAt       CustomTime       `json:"updated_at" gorm:"type:timestamp"`
+	DeletedAt       gorm.DeletedAt   `json:"-" gorm:"index;type:timestamp"`
+	Users           []User           `json:"users,omitempty" gorm:"many2many:user_roles;"`
+	Menus           []Menu           `json:"menus,omitempty" gorm:"many2many:role_menus;"`
+	MenuPermissions []MenuPermission `json:"menu_permissions,omitempty" gorm:"many2many:role_menu_permissions;"`
 }
 
 // TableName specifies the table name for Role model
@@ -64,12 +65,12 @@ func (r *Role) IsActive() bool {
 	return r.Status == 1
 }
 
-// GetPermissionNames returns a list of permission names for this role
-func (r *Role) GetPermissionNames() []string {
+// GetMenuPermissionNames returns a list of menu permission names for this role
+func (r *Role) GetMenuPermissionNames() []string {
 	var permissions []string
-	for _, perm := range r.Permissions {
+	for _, perm := range r.MenuPermissions {
 		if perm.IsActive() {
-			permissions = append(permissions, perm.Name)
+			permissions = append(permissions, perm.Permission)
 		}
 	}
 	return permissions

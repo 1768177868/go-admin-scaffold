@@ -100,5 +100,5 @@ func init() {
 		return tx.Migrator().DropTable("menus")
 	}
 
-	Register("create_menus_table", NewMigration("20240310_create_menus_table.go", up, down))
+	Register("create_menus_table", NewMigration("20240302_5_create_menus_table.go", up, down))
 }

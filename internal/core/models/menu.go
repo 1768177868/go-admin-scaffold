@@ -27,9 +27,10 @@ type Menu struct {
 	Meta MenuMeta `json:"meta" gorm:"type:json;comment:'菜单元信息'"`
 
 	// 关联
-	Parent   *Menu   `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
-	Children []*Menu `json:"children,omitempty" gorm:"foreignKey:ParentID"`
-	Roles    []Role  `json:"roles,omitempty" gorm:"many2many:role_menus;"`
+	Parent      *Menu            `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
+	Children    []*Menu          `json:"children,omitempty" gorm:"foreignKey:ParentID"`
+	Roles       []Role           `json:"roles,omitempty" gorm:"many2many:role_menus;"`
+	Permissions []MenuPermission `json:"permissions,omitempty" gorm:"foreignKey:MenuID"`
 
 	// 时间戳
 	CreatedAt CustomTime     `json:"created_at" gorm:"type:timestamp"`
